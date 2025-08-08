@@ -115,10 +115,12 @@ def load_image(img_path, size=224):
 
     return d_img
 
-def normalization(data):
+def normalization(data, reverse=False):
     data = np.array(data)
     range = np.max(data) - np.min(data)
     data = (data - np.min(data)) / range
+    if reverse:
+        data = 1 - data
     data = list(data.astype('float').reshape(-1, 1))
     return data
 

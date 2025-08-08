@@ -25,8 +25,9 @@ class Data_Loader():
             self.data = folders.uhdiqa(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain)
         elif dataset == 'bid':
             self.data = folders.BID(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain)
-        elif dataset == 'spaq':
-            self.data = folders.SPAQ(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain)
+        elif 'spaq' in dataset:
+            train_idx = int(dataset.split('_')[-1])
+            self.data = folders.SPAQ(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain, column=train_idx)
         elif dataset == 'flive':
             self.data = folders.FLIVE(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain)
         elif dataset == 'csiq':

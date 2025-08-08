@@ -58,7 +58,7 @@ def get_data(dataset, split_seed, data_path='./PromptIQA/utils/dataset/dataset_i
     """
     with open(data_path, "r") as data_info:
         data_info = json.load(data_info)
-    path, img_num = data_info[dataset]
+    path, img_num = data_info[dataset.split('_')[0]]
     img_num = list(range(img_num))
 
     random.seed(split_seed)
@@ -88,15 +88,14 @@ def save_checkpoint(state, is_best, filename="checkpoint.pth.tar"):
     # if is_best:
     #     shutil.copyfile(filename, "model_best.pth.tar")
 
-
+import numpy as np
 def cal_srocc_plcc(pred_score, gt_score):
-    try:
-        srocc, _ = stats.spearmanr(pred_score, gt_score)
-        plcc, _ = stats.pearsonr(pred_score, gt_score)
-    except:
-        srocc, plcc = 0, 0
-
-    return srocc, plcc
+    # try:
+    srocc, _ = stats.spearmanr(pred_score, gt_score)
+    plcc, _ = stats.pearsonr(pred_score, gt_score)
+    krcc, _ = stats.kendalltau(pred_score, gt_score)
+    mae = np.mean(np.abs(np.array(pred_score) - np.array(gt_score)))
+    return srocc, plcc, krcc, mae
 
 
 class AverageMeter:

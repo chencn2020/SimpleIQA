@@ -155,18 +155,22 @@ def main_worker(gpu, ngpus_per_node, args):
 
     train_data_list, train_prompt_list, test_data_list = [], {}, [] # train_prompt_list save the ISPP from different datasets
     train_ori_data = []
-    for dataset in args.dataset: # loading the datasets
-        print('---Load ', dataset)
+    for dataset in args.dataset + args.zero_shot_dataset: # loading the datasets
         path, train_index, test_index = get_data(dataset=dataset, split_seed=args.seed)
-        
-        train_dataset = data_loader.Data_Loader(args.batch_size, dataset, path, train_index, istrain=True)
-        train_ori_data.append(train_dataset)
-        train_data_list.append(train_dataset.get_samples()) # get the data_folder
-        train_prompt_list[dataset] = train_dataset.get_prompt(prompt_num, 'fix') # The ISPP for testing is sampled from training data and is fixed.
+            
+        if dataset not in args.zero_shot_dataset:
+            print('---Load ', dataset)
+            
+            train_dataset = data_loader.Data_Loader(args.batch_size, dataset, path, train_index, istrain=True)
+            train_ori_data.append(train_dataset)
+            train_data_list.append(train_dataset.get_samples()) # get the data_folder
+            train_prompt_list[dataset] = train_dataset.get_prompt(prompt_num, 'fix') # The ISPP for testing is sampled from training data and is fixed.
+        else:
+            print('---Loading Zero Shot Dataset ', dataset)
 
         test_dataset = data_loader.Data_Loader(args.batch_size, dataset, path, test_index, istrain=False)
         test_data_list.append(test_dataset.get_samples())
-            
+        
     print('train_prompt_list', train_prompt_list.keys())
     combined_train_samples = ConcatDataset(train_data_list) # combine the training and testing dataset
     combined_test_samples = ConcatDataset(test_data_list)
@@ -197,7 +201,7 @@ def main_worker(gpu, ngpus_per_node, args):
         pin_memory=True,
     )
 
-    best_srocc, best_plcc = 0, 0
+    best_srocc, best_plcc, best_krcc, best_mae = 0, 0, 0, 9999
     weight = {}
     for data in train_prompt_list.keys(): # the loss weight for different datasets
         weight[data] = 1
@@ -217,11 +221,11 @@ def main_worker(gpu, ngpus_per_node, args):
         gt_scores = [item for sublist in gt_scores for item in sublist]
         pred_scores = gather_together(pred_scores) 
         pred_scores = [item for sublist in pred_scores for item in sublist]
-        train_srocc, train_plcc = cal_srocc_plcc(pred_scores, gt_scores)
+        train_srocc, train_plcc, train_krcc, train_mae = cal_srocc_plcc(pred_scores, gt_scores)
 
         print(
-            "Train SROCC: {}, Train PLCC: {}".format(
-                round(train_srocc, 4), round(train_plcc, 4)
+            "Train SROCC: {}, Train PLCC: {}, Train KRCC: {}, Train MAE: {}".format(
+                round(train_srocc, 4), round(train_plcc, 4), round(train_krcc, 4), round(train_mae, 4)
             )
         )
 
@@ -254,27 +258,32 @@ def main_worker(gpu, ngpus_per_node, args):
                     pred_score_dict[k] = pred_score_dict[k] + v
 
         gt_score_dict = dict(sorted(gt_score_dict.items()))
-        test_srocc, test_plcc = 0, 0
+        test_srocc, test_plcc, test_krcc, test_mae = 0, 0, 0, 0
         for k, v in gt_score_dict.items():
-            test_srocc_, test_plcc_ = cal_srocc_plcc(gt_score_dict[k], pred_score_dict[k])
-            print('\tDataset: {} Test SROCC: {}, PLCC: {}'.format(k, round(test_srocc_, 4), round(test_plcc_, 4)))
-            test_srocc += test_srocc_
-            test_plcc += test_plcc_
+            test_srocc_, test_plcc_, test_krcc_, test_mae_ = cal_srocc_plcc(gt_score_dict[k], pred_score_dict[k])
+            print('\t{} Dataset: {} Test SROCC: {}, PLCC: {}, KRCC: {}, MAE: {}'.format("[Zero Short]" if k not in weight else "" , k, round(test_srocc_, 4), round(test_plcc_, 4), round(test_krcc_, 4), round(test_mae_, 4)))
+            if k in weight:
+                test_srocc += test_srocc_
+                test_plcc += test_plcc_
+                test_krcc += test_krcc_
+                test_mae += test_mae_
             
-        print('test_srocc + test_plcc / 2', (test_srocc + test_plcc) / 2)
+        print(f'AVG Performance [WO Zero Shot]: SROCC, PLCC, KLCC, MAE')
+        total_dataset = len(gt_score_dict.keys())
+        print(f'\t{test_srocc / total_dataset}, {test_plcc / total_dataset}, {test_krcc / total_dataset}, {test_mae / total_dataset}')
         
         if not args.multiprocessing_distributed or (
                 args.multiprocessing_distributed and args.rank % ngpus_per_node == 0
         ):
-            if test_srocc + test_plcc > best_srocc + best_plcc:
-                best_srocc, best_plcc = test_srocc, test_plcc
+            if test_srocc + test_plcc + test_krcc > best_srocc + best_plcc + best_krcc:
+                best_srocc, best_plcc, best_krcc, best_mae = test_srocc, test_plcc, test_krcc, best_mae
                 save_checkpoint(
                     {
                         "state_dict": model.state_dict(),
                         "prompt_num":prompt_num,
                     },
                     is_best=True,
-                    filename=os.path.join(args.save_path, f'best_model_{epoch + 1}.pth.tar'),
+                    filename=os.path.join(args.save_path, f'best_model.pth.tar'),
                 )
                 print("Best Model Saved.")
 
@@ -289,6 +298,8 @@ def test(test_loader, model, promt_data_loader, reverse=False):
     batch_time = AverageMeter("Time", ":6.3f")
     srocc = AverageMeter("SROCC", ":6.2f")
     plcc = AverageMeter("PLCC", ":6.2f")
+    krcc = AverageMeter("KRCC", ":6.2f")
+    mae = AverageMeter("MAE", ":6.2f")
     progress = ProgressMeter(
         len(test_loader),
         [batch_time, srocc, plcc],
@@ -299,7 +310,7 @@ def test(test_loader, model, promt_data_loader, reverse=False):
     with torch.no_grad():
         for index, (img_or, label_or, paths, dataset_type) in enumerate(test_loader):
             dataset_type = dataset_type[0]
-            prompt_dataset = promt_data_loader[dataset_type]
+            # prompt_dataset = promt_data_loader[dataset_type]
             t = time.time()
             
             # has_prompt = False
@@ -321,7 +332,7 @@ def test(test_loader, model, promt_data_loader, reverse=False):
             label = label_or.squeeze(0)[:, -1].view(-1).cuda()
 
             # pred = model.module.inference(img, dataset_type)
-            pred = model(img)
+            pred = model(img).view(-1)
 
             if dataset_type not in pred_scores:
                 pred_scores[dataset_type] = []
@@ -337,13 +348,14 @@ def test(test_loader, model, promt_data_loader, reverse=False):
 
             if index % 100 == 0:
                 for k, v in pred_scores.items():
-                    test_srocc, test_plcc = cal_srocc_plcc(pred_scores[k], gt_scores[k])
+                    test_srocc, test_plcc, test_krcc, test_mae = cal_srocc_plcc(pred_scores[k], gt_scores[k])
                 srocc.update(test_srocc)
                 plcc.update(test_plcc)
+                krcc.update(test_krcc)
+                mae.update(test_mae)
 
                 progress.display(index)
 
-    model.module.clear()
     model.train(True)
     return pred_scores, gt_scores, path
 
@@ -391,7 +403,7 @@ def train(train_loader, model, loss_fun, optimizer, args, epoch, weight):
         # assert (label[:, -1] <= 1).all(), "{}, {}".format(data_name, label[:, -1])
 
         # pred, label_new = model(img, label[:, -1].reshape(-1, 1))
-        pred = model(img)
+        pred = model(img).view(-1)
 
         loss = loss_fun(pred.squeeze(), label.float().detach())
         loss = loss * weight[data_name[0]]
@@ -434,11 +446,8 @@ if __name__ == "__main__":
     )
 
     # data related
-    parser.add_argument(
-        "--dataset",
-        dest="dataset",
-        nargs='+', default=None
-    )
+    parser.add_argument("--dataset", dest="dataset", nargs='+', default=None)
+    parser.add_argument("--zero_shot_dataset", dest="zero_shot_dataset", nargs='+', default=None)
 
     parser.add_argument(
         "--lr", dest="lr", type=float, default=1e-5, help="Learning random_flipping_rate"

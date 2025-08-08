@@ -1,3 +1,5 @@
 __pycache__
 *.pkl
 MIX_Data_Training
+save_logs
+*.log

@@ -223,7 +223,7 @@ class CSIQ(PromptIQADataset):
                 for aug in range(patch_num):
                     sample.append(os.path.join(root, 'dst_imgs_all', imgnames[item]))
                     gt.append(labels[item])
-        gt = normalization(gt)
+        gt = normalization(gt, True)
         # gt = list(np.array(gt) / 1)
         self.samples_p, self.gt_p = sample, gt
 
@@ -348,7 +348,7 @@ class LIVEFolder(PromptIQADataset):
                 sample.append(imgpath[item])
                 gt.append(labels[0][item])
                 
-        gt = normalization(gt)
+        gt = normalization(gt, True)
         # gt =list((np.array(gt) - 1) / 100)
         self.samples_p, self.gt_p = sample, gt
 
@@ -358,6 +358,15 @@ class LIVEFolder(PromptIQADataset):
             self.gt = self.gt[:-1]
         self.transform = transform
         self.batch_size = batch_size
+        
+    def getDistortionTypeFileName(self, path, num):
+        filename = []
+        index = 1
+        for i in range(0, num):
+            name = '%s%s%s' % ('img', str(index), '.bmp')
+            filename.append(os.path.join(path, name))
+            index = index + 1
+        return filename
     
     def reshuffle(self):
         shuffle_sample, shuffle_gt = reshuffle(self.samples_p, self.gt_p)
@@ -367,8 +376,8 @@ class LIVEFolder(PromptIQADataset):
             self.gt = self.gt[:-1]
 
 class SPAQ(PromptIQADataset):
-    def __init__(self, root, index, transform,  batch_size=11, istrain=False):
-        super().__init__('spaq')
+    def __init__(self, root, index, transform,  batch_size=11, istrain=False, column=2):
+        super().__init__(f'spaq_{column}')
         
         sample = []
         gt = []
@@ -380,7 +389,7 @@ class SPAQ(PromptIQADataset):
         for count, row in enumerate(rows, 2):
             if count - 2 in index:
                 sample.append(os.path.join(root, 'img_resize', booksheet.cell(row=count, column=1).value))
-                mos = booksheet.cell(row=count, column=2).value
+                mos = booksheet.cell(row=count, column=column).value
                 mos = np.array(mos)
                 mos = mos.astype(np.float32)
                 gt.append(mos)
