@@ -454,7 +454,7 @@ class BID(PromptIQADataset):
 
         sample, gt = [], []
         for i, item in enumerate(index):
-            sample.append(os.path.join(root, 'ImageDatabase', imgname[item]))
+            sample.append(os.path.join(root, imgname[item]))
             gt.append(mos_all[item])
         gt = normalization(gt)
         # gt = list(np.array(gt) / 9)

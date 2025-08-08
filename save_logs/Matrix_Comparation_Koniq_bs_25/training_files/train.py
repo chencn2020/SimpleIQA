@@ -27,8 +27,6 @@ from AwesomeIQA.MANIQA import maniqa
 import warnings
 warnings.filterwarnings('ignore')
 
-import shutup
-shutup.please()
 loger_path = None
 
 def init(config):
@@ -137,7 +135,7 @@ def main_worker(gpu, ngpus_per_node, args):
             args.batch_size = int(args.batch_size / ngpus_per_node)
             args.workers = int((args.workers + ngpus_per_node - 1) / ngpus_per_node)
             model = torch.nn.parallel.DistributedDataParallel(
-                model, device_ids=[args.gpu], find_unused_parameters=True
+                model, device_ids=[args.gpu]
             )
             print("Model Distribute.")
         else:
@@ -302,26 +300,24 @@ def test(test_loader, model, promt_data_loader, reverse=False):
             prompt_dataset = promt_data_loader[dataset_type]
             t = time.time()
             
-            # has_prompt = False
-            # if hasattr(model.module, 'check_prompt'):
-            #     has_prompt =  model.module.check_prompt(dataset_type)
+            has_prompt = False
+            if hasattr(model.module, 'check_prompt'):
+                has_prompt =  model.module.check_prompt(dataset_type)
             
-            # if not has_prompt:
-            #     for img, label in prompt_dataset:
-            #         img = img.squeeze(0).cuda()
-            #         label = label.squeeze(0).cuda()
-            #         if reverse == 2:
-            #             label = torch.rand_like(label[:, -1]).cuda()
-            #         else:
-            #             label = label[:, -1].cuda() if not reverse else (1 - label[:, -1].cuda())
-            #         model.module.forward_prompt(img, label.reshape(-1, 1), dataset_type)
+            if not has_prompt:
+                for img, label in prompt_dataset:
+                    img = img.squeeze(0).cuda()
+                    label = label.squeeze(0).cuda()
+                    if reverse == 2:
+                        label = torch.rand_like(label[:, -1]).cuda()
+                    else:
+                        label = label[:, -1].cuda() if not reverse else (1 - label[:, -1].cuda())
+                    model.module.forward_prompt(img, label.reshape(-1, 1), dataset_type)
 
             img = img_or.squeeze(0).cuda()
-            # label = label_or.squeeze(0).cuda()[:, 2]
-            label = label_or.squeeze(0)[:, -1].view(-1).cuda()
+            label = label_or.squeeze(0).cuda()[:, 2]
 
-            # pred = model.module.inference(img, dataset_type)
-            pred = model(img)
+            pred = model.module.inference(img, dataset_type)
 
             if dataset_type not in pred_scores:
                 pred_scores[dataset_type] = []
@@ -372,28 +368,27 @@ def train(train_loader, model, loss_fun, optimizer, args, epoch, weight):
     
     for index, (img, label, _, data_name) in enumerate(train_loader):
         img = img.squeeze(0)
-        label = label.squeeze(0)[:, -1].view(-1).cuda()
+        label = label.squeeze(0)
 
         data_time.update(time.time() - end)
 
         optimizer.zero_grad()
 
-        # random_scale_ = random.uniform(0, 1)
-        # if random_scale_ < random_scale_rate: # random scale
-        #     scale = random.uniform(float(torch.max(label[:, -1], dim=-1).values), 1)
-        #     label[:, -1] = label[:, -1] / scale
+        random_scale_ = random.uniform(0, 1)
+        if random_scale_ < random_scale_rate: # random scale
+            scale = random.uniform(float(torch.max(label[:, -1], dim=-1).values), 1)
+            label[:, -1] = label[:, -1] / scale
 
-        # random_flipping_ = random.uniform(0, 1)
-        # if random_flipping_ < random_flipping_rate: # random reverse
-        #     label[:, -1] = 1 - label[:, -1]
+        random_flipping_ = random.uniform(0, 1)
+        if random_flipping_ < random_flipping_rate: # random reverse
+            label[:, -1] = 1 - label[:, -1]
             
-        # assert (label[:, -1] >= 0).all(), "{}, {}".format(data_name, label[:, -1])
-        # assert (label[:, -1] <= 1).all(), "{}, {}".format(data_name, label[:, -1])
+        assert (label[:, -1] >= 0).all(), "{}, {}".format(data_name, label[:, -1])
+        assert (label[:, -1] <= 1).all(), "{}, {}".format(data_name, label[:, -1])
 
-        # pred, label_new = model(img, label[:, -1].reshape(-1, 1))
-        pred = model(img)
+        pred, label_new = model(img, label[:, -1].reshape(-1, 1))
 
-        loss = loss_fun(pred.squeeze(), label.float().detach())
+        loss = loss_fun(pred.squeeze(), label_new.float().detach())
         loss = loss * weight[data_name[0]]
         epoch_loss.append(loss.item())
 
@@ -402,16 +397,16 @@ def train(train_loader, model, loss_fun, optimizer, args, epoch, weight):
         loss.backward()
         optimizer.step()
         
-        # if random_scale_ < random_scale_rate: # random scale
-        #     pred = pred * scale
-        #     label_new = label_new * scale
+        if random_scale_ < random_scale_rate: # random scale
+            pred = pred * scale
+            label_new = label_new * scale
 
-        # if random_flipping_ < random_flipping_rate:
-        #     pred_scores = pred_scores + (1 - pred).cpu().tolist()
-        #     gt_scores = gt_scores + (1 - label_new).cpu().tolist()
-        # else:
-        pred_scores = pred_scores + pred.cpu().tolist()
-        gt_scores = gt_scores + label.cpu().tolist()
+        if random_flipping_ < random_flipping_rate:
+            pred_scores = pred_scores + (1 - pred).cpu().tolist()
+            gt_scores = gt_scores + (1 - label_new).cpu().tolist()
+        else:
+            pred_scores = pred_scores + pred.cpu().tolist()
+            gt_scores = gt_scores + label_new.cpu().tolist()
 
         # measure elapsed time
         batch_time.update(time.time() - end)
