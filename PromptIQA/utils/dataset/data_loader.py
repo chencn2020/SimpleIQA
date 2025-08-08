@@ -2,20 +2,39 @@ import torch
 import torchvision
 
 from PromptIQA.utils.dataset import folders
-from PromptIQA.utils.dataset.process import ToTensor, Normalize, RandHorizontalFlip
+from PromptIQA.utils.dataset.process import ToTensor, Normalize, RandHorizontalFlip, Resize
+
+import cv2
+import numpy as np
+
+# resize_size = None
+# def load_image(img_path):
+#     try:
+#         d_img = cv2.imread(img_path, cv2.IMREAD_COLOR)
+#         d_img = cv2.resize(d_img, resize_size, interpolation=cv2.INTER_CUBIC)
+#         d_img = cv2.cvtColor(d_img, cv2.COLOR_BGR2RGB)
+#         d_img = np.array(d_img).astype('float32') / 255
+#         d_img = np.transpose(d_img, (2, 0, 1))
+#         print('load image:', img_path, d_img.shape)
+#     except:
+#         print(img_path)
+
+#     return d_img
 
 class Data_Loader():
     """Dataset class for IQA databases"""
 
-    def __init__(self, batch_size, dataset, path, img_indx, istrain=True, dist_type=None):
+    def __init__(self, batch_size, dataset, path, img_indx, istrain=True, dist_type=None, **kwargs):
+        global resize_size
+        resize_size = kwargs.get('resize_size', (224, 224))
 
         self.batch_size = batch_size
         self.istrain = istrain
 
         if istrain:
-            transforms=torchvision.transforms.Compose([Normalize(0.5, 0.5), RandHorizontalFlip(prob_aug=0.5), ToTensor()])
+            transforms=torchvision.transforms.Compose([Resize(resize_size), Normalize(0.5, 0.5), RandHorizontalFlip(prob_aug=0.5), ToTensor()])
         else:
-            transforms=torchvision.transforms.Compose([Normalize(0.5, 0.5), ToTensor()])
+            transforms=torchvision.transforms.Compose([Resize(resize_size), Normalize(0.5, 0.5), ToTensor()])
 
         if dataset == 'livec':
             self.data = folders.LIVEC(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain)

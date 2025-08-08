@@ -103,13 +103,13 @@ def getFileName(path, suffix):
             filename.append(i)
     return filename
 
-def load_image(img_path, size=224):
+def load_image(img_path, size=512):
     try:
         d_img = cv2.imread(img_path, cv2.IMREAD_COLOR)
-        d_img = cv2.resize(d_img, (size, size), interpolation=cv2.INTER_CUBIC)
-        d_img = cv2.cvtColor(d_img, cv2.COLOR_BGR2RGB)
-        d_img = np.array(d_img).astype('float32') / 255
-        d_img = np.transpose(d_img, (2, 0, 1))
+        # d_img = cv2.resize(d_img, (size, size), interpolation=cv2.INTER_CUBIC)
+        # d_img = cv2.cvtColor(d_img, cv2.COLOR_BGR2RGB)
+        # d_img = np.array(d_img).astype('float32') / 255
+        # d_img = np.transpose(d_img, (2, 0, 1))
     except:
         print(img_path)
 

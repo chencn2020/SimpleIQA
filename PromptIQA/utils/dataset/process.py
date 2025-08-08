@@ -67,6 +67,30 @@ class FiveCrop(object):
         else:
             raise ValueError("输入的sample不是期望的格式或尺寸。")
 
+import cv2
+class Resize(object):
+    def __init__(self, size=(224, 224)):
+        self.size = size  # 裁剪图片的尺寸
+
+    def __call__(self, sample):
+        if isinstance(sample, dict):
+            img = sample['img']
+            gt = sample['gt']
+            img = cv2.resize(img, self.size, interpolation=cv2.INTER_CUBIC)
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            img = np.array(img).astype('float32') / 255
+            img = np.transpose(img, (2, 0, 1))
+        
+            sample = {'img': img, 'gt': gt}
+        else:
+            sample = cv2.resize(sample, self.size, interpolation=cv2.INTER_CUBIC)
+            sample = cv2.cvtColor(sample, cv2.COLOR_BGR2RGB)
+            sample = np.array(sample).astype('float32') / 255
+            sample = np.transpose(sample, (2, 0, 1))
+
+        return sample
+
+        
 class RandHorizontalFlip(object):
     def __init__(self, prob_aug):
         self.prob_aug = prob_aug

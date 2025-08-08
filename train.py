@@ -23,14 +23,14 @@ from PromptIQA.utils.toolkit import *
 from PromptIQA.models import promptiqa
 
 from AwesomeIQA.MANIQA import maniqa
+from AwesomeIQA.MobileIQA import MobileViT_IQA
 
 import warnings
 warnings.filterwarnings('ignore')
+loger_path = None
 
 import shutup
 shutup.please()
-loger_path = None
-
 def init(config):
     global loger_path
     if config.dist_url == "env://" and config.world_size == -1:
@@ -127,6 +127,8 @@ def main_worker(gpu, ngpus_per_node, args):
         model = promptiqa.PromptIQA()
     elif args.model == 'maniqa':
         model = maniqa.MANIQA().cuda()
+    elif args.model == 'MobileViT_IQA':
+        model = MobileViT_IQA.MobileViT_IQA().cuda()
     else:
         raise NotImplementedError('Only PromptIQA')
 
@@ -161,14 +163,14 @@ def main_worker(gpu, ngpus_per_node, args):
         if dataset not in args.zero_shot_dataset:
             print('---Load ', dataset)
             
-            train_dataset = data_loader.Data_Loader(args.batch_size, dataset, path, train_index, istrain=True)
+            train_dataset = data_loader.Data_Loader(args.batch_size, dataset, path, train_index, istrain=True, resize_size=args.resize_size)
             train_ori_data.append(train_dataset)
             train_data_list.append(train_dataset.get_samples()) # get the data_folder
             train_prompt_list[dataset] = train_dataset.get_prompt(prompt_num, 'fix') # The ISPP for testing is sampled from training data and is fixed.
         else:
             print('---Loading Zero Shot Dataset ', dataset)
 
-        test_dataset = data_loader.Data_Loader(args.batch_size, dataset, path, test_index, istrain=False)
+        test_dataset = data_loader.Data_Loader(args.batch_size, dataset, path, test_index, istrain=False, resize_size=args.resize_size)
         test_data_list.append(test_dataset.get_samples())
         
     print('train_prompt_list', train_prompt_list.keys())
@@ -518,6 +520,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument("--gpu", default=None, type=int, help="GPU id to use.")
+    parser.add_argument("--resize_size", default=[224, 224], type=int, nargs=2, help="img resize size")
     parser.add_argument("--random_flipping_rate", default=0.1, type=float)
     parser.add_argument("--random_scale_rate", default=0.5, type=float)
     parser.add_argument("--model", default='promptiqa', type=str)
