@@ -35,6 +35,7 @@ import shutup
 shutup.please()
 def init(config):
     global loger_path
+    
     train_cfg = config.train  # 方便引用
     
     if train_cfg.dist_url == "env://" and train_cfg.world_size == -1:
@@ -45,15 +46,15 @@ def init(config):
     print("train_cfg.distributed", train_cfg.distributed)
 
     loger_path = os.path.join(train_cfg.save_path, "log")
-    if not os.path.isdir(loger_path):
-        os.makedirs(loger_path)
+    os.makedirs(loger_path, exist_ok=True)
+    printArgs(config, loger_path)
+    
     sys.stdout = log_writer.Logger(os.path.join(loger_path, "training_logs.log"))
     print("All train and test data will be saved in: ", train_cfg.save_path)
     print("----------------------------------")
     print(
         "Begin Time: ", time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
     )
-    printArgs(train_cfg, loger_path)
     setup_seed(train_cfg.seed)
 
     # Save the traning files.
@@ -157,7 +158,7 @@ def main_worker(gpu, ngpus_per_node, config):
             train_cfg.batch_size //= ngpus_per_node
             train_cfg.workers = int((train_cfg.workers + ngpus_per_node - 1) / ngpus_per_node)
             model = torch.nn.parallel.DistributedDataParallel(
-                model, device_ids=[train_cfg.gpu], find_unused_parameters=True
+                model, device_ids=[train_cfg.gpu] # , find_unused_parameters=True
             )
             print("Model Distribute.")
         else:
@@ -168,6 +169,13 @@ def main_worker(gpu, ngpus_per_node, config):
     criterion = nn.L1Loss().cuda(train_cfg.gpu)
 
     # 优化器
+    # if train_cfg.model == "hyperiqa":
+    #     backbone_params = list(map(id, model.module.res.parameters()))
+    #     hypernet_params = filter(lambda p: id(p) not in backbone_params, model.module.parameters())
+    #     paras = [{'params': hypernet_params, 'lr': opt_cfg.lr * opt_cfg.lr_ratio},
+    #              {'params': model.module.res.parameters(), 'lr': opt_cfg.lr}]
+    #     optimizer = torch.optim.Adam(paras, weight_decay=opt_cfg.weight_decay)
+    # else:
     optimizer = torch.optim.Adam(
         model.parameters(),
         lr=opt_cfg.lr,
@@ -278,7 +286,7 @@ def main_worker(gpu, ngpus_per_node, config):
             if dataset_cfg.re_sample:
                 gt_score_dict[k] = np.mean(np.reshape(np.array(gt_score_dict[k]), (-1, dataset_cfg.re_sample_times)), axis=1)
                 pred_score_dict[k] = np.mean(np.reshape(np.array(pred_score_dict[k]), (-1, dataset_cfg.re_sample_times)), axis=1)
-                
+            
             test_srocc_, test_plcc_, test_krcc_, test_mae_ = cal_srocc_plcc(gt_score_dict[k], pred_score_dict[k])
             print(f'\t{"[Zero Short]" if k not in weight else ""} {k} Dataset: '
                   f'{round(test_srocc_, 4)}, {round(test_plcc_, 4)}, '
@@ -327,7 +335,7 @@ def test(test_loader, model):
 
     model.train(False)
     with torch.no_grad():
-        for index, (img_or, label_or, paths, dataset_type) in enumerate(test_loader):
+        for index, (img_or, label_or, paths, dataset_type) in enumerate(tqdm(test_loader)):
             dataset_type = dataset_type[0]
             # prompt_dataset = promt_data_loader[dataset_type]
             t = time.time()
@@ -440,9 +448,6 @@ if __name__ == "__main__":
     args_cli = parser.parse_args()
 
     cfg_dict = load_yaml(args_cli.config)
-
-    print(cfg_dict)  # 现在 cfg 中包含所有参数
-
     cfg = dict_to_namespace(cfg_dict)
     cfg.train.config = args_cli.config
 

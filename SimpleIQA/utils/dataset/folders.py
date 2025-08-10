@@ -23,8 +23,8 @@ class LIVEC(PromptIQADataset):
             gt.append(labels[item])
         
         if getattr(dataset_cfg, 're_sample', False):
-            sample = [sa for _ in range(getattr(dataset_cfg, 're_sample_times', 25)) for sa in sample]
-            gt = [g for _ in range(getattr(dataset_cfg, 're_sample_times', 25)) for g in gt]
+            sample = [sa for sa in sample for _ in range(getattr(dataset_cfg, 're_sample_times', 25)) ]
+            gt = [g for g in gt for _ in range(getattr(dataset_cfg, 're_sample_times', 25)) ]
 
         gt = normalization(gt)
         # gt = list((np.array(gt) - 1) / 100)

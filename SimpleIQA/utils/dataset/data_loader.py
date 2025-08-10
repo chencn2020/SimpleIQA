@@ -20,15 +20,14 @@ class Data_Loader():
         #     transforms=torchvision.transforms.Compose([Resize(resize_size), Normalize(0.5, 0.5), ToTensor()])
         
         transforms = []
-        if istrain:
-            if getattr(dataset_cfg, 'random_flipping', False):
-                transforms.append(torchvision.transforms.RandomHorizontalFlip(p=getattr(dataset_cfg, 'random_flipping_rate', 0.5)))
+        if istrain and getattr(dataset_cfg, 'random_flipping', False):
+            transforms.append(torchvision.transforms.RandomHorizontalFlip(p=getattr(dataset_cfg, 'random_flipping_rate', 0.5)))
 
-            if getattr(dataset_cfg, 'resize_img', False):
-                transforms.append(torchvision.transforms.Resize(size=self.resize_size))
+        if getattr(dataset_cfg, 'resize_img', False):
+            transforms.append(torchvision.transforms.Resize(size=self.resize_size))
 
-            if getattr(dataset_cfg, 'random_crop', False):
-                transforms.append(torchvision.transforms.RandomCrop(size=getattr(dataset_cfg, 'random_crop_size', (224, 224))))
+        if getattr(dataset_cfg, 'random_crop', False):
+            transforms.append(torchvision.transforms.RandomCrop(size=getattr(dataset_cfg, 'random_crop_size', (224, 224))))
 
         transforms.append(torchvision.transforms.ToTensor())
         transforms.append(torchvision.transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)))

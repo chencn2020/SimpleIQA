@@ -1,5 +1,5 @@
 train:
-  seed: 3407
+  seed: 2023
   zero_shot_dataset: []
   batch_size: 196
   epochs: 300
@@ -17,8 +17,9 @@ train:
 
 optimizer:
   optimizer: adam
-  lr: 1e-5
-  weight_decay: 1e-5
+  lr: 2e-5
+  weight_decay: 5e-4
+  lr_ratio: 10
 
 loss:
   loss: l1
@@ -28,6 +29,9 @@ dataset:
   zero_shot_dataset: []
 
   # Augmentation
+  random_flipping: true
+  random_flipping_rate: 0.5
+  
   re_sample: true
   re_sample_times: 25
 
