@@ -2,12 +2,13 @@ import os
 import numpy as np
 import csv
 from openpyxl import load_workbook
+import scipy
 
 from SimpleIQA.utils.dataset.loader_tools import *
 from SimpleIQA.utils.dataset.PromptIQADataset import PromptIQADataset
 
 class LIVEC(PromptIQADataset):
-    def __init__(self, root, index, transform, batch_size=11, istrain=True):
+    def __init__(self, root, index, transform, batch_size=11, istrain=True, dataset_cfg=None, **kwargs):
         super().__init__('livec')
         imgpath = scipy.io.loadmat(os.path.join(root, 'Data', 'AllImages_release.mat'))
         imgpath = imgpath['AllImages_release']
@@ -20,6 +21,11 @@ class LIVEC(PromptIQADataset):
         for i, item in enumerate(index):
             sample.append(os.path.join(root, 'Images', imgpath[item][0][0]))
             gt.append(labels[item])
+        
+        if getattr(dataset_cfg, 're_sample', False):
+            sample = [sa for _ in range(getattr(dataset_cfg, 're_sample_times', 25)) for sa in sample]
+            gt = [g for _ in range(getattr(dataset_cfg, 're_sample_times', 25)) for g in gt]
+
         gt = normalization(gt)
         # gt = list((np.array(gt) - 1) / 100)
         
@@ -31,6 +37,8 @@ class LIVEC(PromptIQADataset):
             self.gt = self.gt[:-1]
         self.transform = transform
         self.batch_size = batch_size
+        self.istrain = istrain
+        self._print_data_info()
         
 class AIGCIQA3W(PromptIQADataset):
     def __init__(self, root, index, transform, batch_size=11, istrain=True):

@@ -1,7 +1,7 @@
 train:
   seed: 3407
   zero_shot_dataset: []
-  batch_size: 12
+  batch_size: 196
   epochs: 300
   T_max: 50
   eta_min: 0
@@ -12,10 +12,8 @@ train:
   dist_backend: "nccl"
   multiprocessing_distributed: true
   gpu: null
-  random_flipping_rate: 0.5
-  random_scale_rate: 0.5
-  model: maniqa
-  save_path: "./EXP/SingleDataset/maniqa"
+  model: hyperiqa
+  save_path: "./EXP/SingleDataset/hyperiqa"
 
 optimizer:
   optimizer: adam
@@ -29,11 +27,15 @@ dataset:
   train_dataset: [livec]
   zero_shot_dataset: []
 
+  # Augmentation
   re_sample: true
   re_sample_times: 25
 
-  resize_img: true
-  resize_size: [224, 224]
+  resize_img: false
+  resize_size: [512, 512]
 
-  crop_img: true
-  crop_size: [224, 224]
+  random_crop: true
+  random_crop_size: [224, 224]
+
+  # Loader
+  num_workers: 2

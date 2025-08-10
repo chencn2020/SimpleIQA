@@ -23,4 +23,6 @@ class PromptIQADataset(data.Dataset):
 
     def get_promt(self, n=10, sample_type='fix'):
         return get_prompt(self.samples_p, self.gt_p, self.transform, n, self.__len__(), sample_type=sample_type)
-    
+
+    def _print_data_info(self):
+        print(f'Loading {self.dataset_name} dataset: number of {"training" if self.istrain else "testing"} samples: {len(self.samples_p)}')

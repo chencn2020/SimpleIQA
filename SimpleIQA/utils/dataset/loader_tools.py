@@ -2,12 +2,9 @@ import torch.utils.data as data
 import torch
 
 import os
-import scipy.io
 import numpy as np
-import csv
-from openpyxl import load_workbook
-import cv2
 import random
+from PIL import Image
 
 class prompt_data(data.Dataset):
     def __init__(self, sample, gt, transform, div=1):
@@ -82,9 +79,9 @@ def get_item(samples, gt, index, transform, div=1):
         position_to_insert = 0
         target = np.insert(target, position_to_insert, values_to_insert)
 
-        sample = load_image(path)
+        sample = transform(load_image(path))
+        target = torch.from_numpy(target).type(torch.FloatTensor)
         samples = {'img': sample, 'gt': target}
-        samples = transform(samples)
 
         if img_tensor is None:
             img_tensor = samples['img'].unsqueeze(0)
@@ -103,17 +100,9 @@ def getFileName(path, suffix):
             filename.append(i)
     return filename
 
-def load_image(img_path, size=512):
-    try:
-        d_img = cv2.imread(img_path, cv2.IMREAD_COLOR)
-        # d_img = cv2.resize(d_img, (size, size), interpolation=cv2.INTER_CUBIC)
-        # d_img = cv2.cvtColor(d_img, cv2.COLOR_BGR2RGB)
-        # d_img = np.array(d_img).astype('float32') / 255
-        # d_img = np.transpose(d_img, (2, 0, 1))
-    except:
-        print(img_path)
-
-    return d_img
+def load_image(img_path):
+    img = Image.open(img_path).convert('RGB')
+    return img
 
 def normalization(data, reverse=False):
     data = np.array(data)

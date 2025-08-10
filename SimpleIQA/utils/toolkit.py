@@ -102,13 +102,10 @@ def load_yaml(path: str) -> Any:
 
 def recursive_update(namespace: Any, updates: Dict[str, Any]) -> Any:
     """
-    Recursively update attributes of an object if they already exist.
-
-    This function walks a nested dictionary of updates and sets attributes on
-    `namespace` only when the attribute is present.
+    Recursively update attributes of an object; if they do not exist, add them.
 
     Args:
-        namespace: An object with settable attributes (e.g., argparse.Namespace).
+        namespace: An object with settable attributes (e.g., argparse.Namespace or dict).
         updates: A possibly nested dictionary of updates.
 
     Returns:
@@ -116,11 +113,16 @@ def recursive_update(namespace: Any, updates: Dict[str, Any]) -> Any:
     """
     for k, v in updates.items():
         if isinstance(v, dict):
-            recursive_update(namespace, v)
-        else:
+            # 如果当前属性是 dict 或 Namespace，也递归更新
             if hasattr(namespace, k):
-                setattr(namespace, k, v)
+                sub_attr = getattr(namespace, k)
+                recursive_update(sub_attr, v)
+            else:
+                setattr(namespace, k, v)  # YAML 有，但 args 没有，直接添加
+        else:
+            setattr(namespace, k, v)  # 不管是否存在，都直接赋值
     return namespace
+
 
 
 def setup_seed(seed: int) -> None:
@@ -207,8 +209,8 @@ def adjust_learning_rate(optimizer: torch.optim.Optimizer, epoch: int, args: Any
         epoch: Current epoch index (starting from 0).
         args: An object that must define `lr` and `epochs`.
     """
-    lr = args.lr
-    lr *= 0.5 * (1.0 + math.cos(math.pi * epoch / args.epochs))
+    lr = args.optimizer.lr
+    lr *= 0.5 * (1.0 + math.cos(math.pi * epoch / args.train.epochs))
 
     for param_group in optimizer.param_groups:
         param_group["lr"] = lr

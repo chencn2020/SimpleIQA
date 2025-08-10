@@ -20,6 +20,9 @@ from SimpleIQA.utils.toolkit import *
 from SimpleIQA.AwesomeIQA.MANIQA import maniqa
 from SimpleIQA.AwesomeIQA.MobileIQA import MobileViT_IQA
 from SimpleIQA.AwesomeIQA.CLIPIQA import ClipIQA
+from SimpleIQA.AwesomeIQA.HyperIQA import HyperIQA
+
+from tqdm import tqdm
 
 import argparse
 import yaml
@@ -32,27 +35,29 @@ import shutup
 shutup.please()
 def init(config):
     global loger_path
-    if config.dist_url == "env://" and config.world_size == -1:
-        config.world_size = int(os.environ["WORLD_SIZE"])
+    train_cfg = config.train  # 方便引用
+    
+    if train_cfg.dist_url == "env://" and train_cfg.world_size == -1:
+        train_cfg.world_size = int(os.environ["WORLD_SIZE"])
 
-    config.distributed = config.world_size > 1 or config.multiprocessing_distributed
+    train_cfg.distributed = train_cfg.world_size > 1 or train_cfg.multiprocessing_distributed
 
-    print("config.distributed", config.distributed)
+    print("train_cfg.distributed", train_cfg.distributed)
 
-    loger_path = os.path.join(config.save_path, "log")
+    loger_path = os.path.join(train_cfg.save_path, "log")
     if not os.path.isdir(loger_path):
         os.makedirs(loger_path)
     sys.stdout = log_writer.Logger(os.path.join(loger_path, "training_logs.log"))
-    print("All train and test data will be saved in: ", config.save_path)
+    print("All train and test data will be saved in: ", train_cfg.save_path)
     print("----------------------------------")
     print(
         "Begin Time: ", time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
     )
-    printArgs(config, loger_path)
-    setup_seed(config.seed)
+    printArgs(train_cfg, loger_path)
+    setup_seed(train_cfg.seed)
 
     # Save the traning files.
-    file_backup = os.path.join(config.save_path, "training_files")
+    file_backup = os.path.join(train_cfg.save_path, "training_files")
     os.makedirs(file_backup, exist_ok=True)
     shutil.copy(
         os.path.basename(__file__),
@@ -65,8 +70,8 @@ def init(config):
     )
     
     shutil.copy(
-        config.config,
-        os.path.join(file_backup, os.path.basename(config.config)),
+        train_cfg.config,
+        os.path.join(file_backup, os.path.basename(train_cfg.config)),
     )
 
     save_folder_list = ["SimpleIQA"]
@@ -79,110 +84,124 @@ def init(config):
 def main(config):
     init(config)
     ngpus_per_node = torch.cuda.device_count()
-    if config.multiprocessing_distributed:
-        config.world_size = ngpus_per_node * config.world_size
 
-        print(config.world_size, ngpus_per_node, ngpus_per_node)
+    if config.train.multiprocessing_distributed:
+        config.train.world_size = ngpus_per_node * config.train.world_size
+        print(config.train.world_size, ngpus_per_node, ngpus_per_node)
         mp.spawn(main_worker, nprocs=ngpus_per_node, args=(ngpus_per_node, config))
     else:
         # Simply call main_worker function
-        main_worker(config.gpu, ngpus_per_node, config)
+        main_worker(config.train.gpu, ngpus_per_node, config)
 
-    print("End Time: ", time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())))
+    print("End Time: ", time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
 
 def main_worker(gpu, ngpus_per_node, config):
-    
-    if gpu == 0:
-        loger_path = os.path.join(config.save_path, "log")
-        sys.stdout = log_writer.Logger(os.path.join(loger_path, "training_logs_GPU0.log")) # The print info will be saved here
-    config.gpu = gpu
+    train_cfg = config.train
+    opt_cfg = config.optimizer
+    dataset_cfg = config.dataset
 
-    # suppress printing if not master
-    if config.multiprocessing_distributed and config.gpu != 0:
+    # GPU 日志输出
+    if gpu == 0:
+        loger_path = os.path.join(train_cfg.save_path, "log")
+        sys.stdout = log_writer.Logger(os.path.join(loger_path, "training_logs_GPU0.log"))
+    train_cfg.gpu = gpu
+
+    # 非主进程屏蔽打印
+    if train_cfg.multiprocessing_distributed and train_cfg.gpu != 0:
         def print_pass(*args):
             pass
-
         builtins.print = print_pass
 
-    if config.gpu is not None:
-        print("Use GPU: {} for training".format(config.gpu))
+    if train_cfg.gpu is not None:
+        print(f"Use GPU: {train_cfg.gpu} for training")
 
-    if config.distributed:
-        if config.dist_url == "env://" and config.rank == -1:
-            config.rank = int(os.environ["RANK"])
-        if config.multiprocessing_distributed:
-            config.rank = config.rank * ngpus_per_node + gpu
+    # 初始化分布式
+    if train_cfg.distributed:
+        if train_cfg.dist_url == "env://" and train_cfg.rank == -1:
+            train_cfg.rank = int(os.environ["RANK"])
+        if train_cfg.multiprocessing_distributed:
+            train_cfg.rank = train_cfg.rank * ngpus_per_node + gpu
         dist.init_process_group(
-            backend=config.dist_backend,
-            init_method=config.dist_url,
-            world_size=config.world_size,
-            rank=config.rank,
+            backend=train_cfg.dist_backend,
+            init_method=train_cfg.dist_url,
+            world_size=train_cfg.world_size,
+            rank=train_cfg.rank,
         )
 
-    seed = config.seed + config.rank * 100
+    # 设置随机种子
+    seed = train_cfg.seed + train_cfg.rank * 100
     torch.manual_seed(seed)
     np.random.seed(seed)
     random.seed(seed)
-    print('seed', seed, 'rank', config.rank)
+    print("seed", seed, "rank", train_cfg.rank)
 
-    print('Take Model: ', config.model)
-    if config.model == 'promptiqa':
-        # model = SimpleIQA.PromptIQA()
-        pass
-    elif config.model == 'maniqa':
-        model = maniqa.MANIQA().cuda()
-    elif config.model == 'MobileViT_IQA':
-        model = MobileViT_IQA.MobileViT_IQA().cuda()
-    elif config.model == 'clipiqa':
-        model = ClipIQA.CLIPIQA().cuda()
+    # 创建模型
+    print("Take Model:", train_cfg.model)
+    if train_cfg.model == "maniqa":
+        model = maniqa.MANIQA()
+    elif train_cfg.model == "MobileViT_IQA":
+        model = MobileViT_IQA.MobileViT_IQA()
+    elif train_cfg.model == "clipiqa":
+        model = ClipIQA.CLIPIQA()
+    elif train_cfg.model == "hyperiqa":
+        model = HyperIQA.HyperNet(16, 112, 224, 112, 56, 28, 14, 7)
     else:
-        raise NotImplementedError('Only PromptIQA')
+        print("config.model", train_cfg.model)
+        raise NotImplementedError("Only PromptIQA")
 
-    if config.distributed:
-        if config.gpu is not None:
-            torch.cuda.set_device(config.gpu)
-            model.cuda(config.gpu)
-            config.batch_size = int(config.batch_size / ngpus_per_node)
-            config.workers = int((config.workers + ngpus_per_node - 1) / ngpus_per_node)
+    model = model.cuda()
+    if train_cfg.distributed:
+        if train_cfg.gpu is not None:
+            torch.cuda.set_device(train_cfg.gpu)
+            model.cuda(train_cfg.gpu)
+            train_cfg.batch_size //= ngpus_per_node
+            train_cfg.workers = int((train_cfg.workers + ngpus_per_node - 1) / ngpus_per_node)
             model = torch.nn.parallel.DistributedDataParallel(
-                model, device_ids=[config.gpu], find_unused_parameters=True
+                model, device_ids=[train_cfg.gpu], find_unused_parameters=True
             )
             print("Model Distribute.")
         else:
             model.cuda()
             model = torch.nn.parallel.DistributedDataParallel(model)
-    
-    criterion = nn.L1Loss().cuda(config.gpu)
 
+    # 损失函数
+    criterion = nn.L1Loss().cuda(train_cfg.gpu)
+
+    # 优化器
     optimizer = torch.optim.Adam(
-        model.parameters(), 
-        lr=config.lr, 
-        weight_decay=config.weight_decay
+        model.parameters(),
+        lr=opt_cfg.lr,
+        weight_decay=opt_cfg.weight_decay
     )
 
-    prompt_num = config.batch_size - 1 # the number of prompts is batch_size / num_gpus - 1
-    print('prompt_num', prompt_num)
+    prompt_num = train_cfg.batch_size - 1
+    print("prompt_num", prompt_num)
 
-    train_data_list, train_prompt_list, test_data_list = [], {}, [] # train_prompt_list save the ISPP from different datasets
+    # 加载数据
+    train_data_list, train_prompt_list, test_data_list = [], {}, []
     train_ori_data = []
-    for dataset in config.dataset + config.zero_shot_dataset: # loading the datasets
-        path, train_index, test_index = get_data(dataset=dataset, split_seed=config.seed)
-            
-        if dataset not in config.zero_shot_dataset:
-            print('---Load ', dataset)
-            
-            train_dataset = data_loader.Data_Loader(config.batch_size, dataset, path, train_index, istrain=True, resize_size=config.resize_size)
+    for dataset in dataset_cfg.train_dataset + dataset_cfg.zero_shot_dataset:
+        path, train_index, test_index = get_data(dataset=dataset, split_seed=train_cfg.seed)
+        if dataset not in dataset_cfg.zero_shot_dataset:
+            print(f"---Load {dataset}")
+            train_dataset = data_loader.Data_Loader(
+                train_cfg.batch_size, dataset, path, train_index,
+                istrain=True, dataset_cfg=dataset_cfg
+            )
             train_ori_data.append(train_dataset)
-            train_data_list.append(train_dataset.get_samples()) # get the data_folder
-            train_prompt_list[dataset] = train_dataset.get_prompt(prompt_num, 'fix') # The ISPP for testing is sampled from training data and is fixed.
+            train_data_list.append(train_dataset.get_samples())
+            train_prompt_list[dataset] = train_dataset.get_prompt(prompt_num, "fix")
         else:
-            print('---Loading Zero Shot Dataset ', dataset)
+            print(f"---Loading Zero Shot Dataset {dataset}")
 
-        test_dataset = data_loader.Data_Loader(config.batch_size, dataset, path, test_index, istrain=False, resize_size=config.resize_size)
+        test_dataset = data_loader.Data_Loader(
+            train_cfg.batch_size, dataset, path, test_index,
+            istrain=False, dataset_cfg=dataset_cfg
+        )
         test_data_list.append(test_dataset.get_samples())
-        
-    print('train_prompt_list', train_prompt_list.keys())
-    combined_train_samples = ConcatDataset(train_data_list) # combine the training and testing dataset
+
+    print("train_prompt_list", train_prompt_list.keys())
+    combined_train_samples = ConcatDataset(train_data_list)
     combined_test_samples = ConcatDataset(test_data_list)
 
     print("train_dataset", len(combined_train_samples))
@@ -193,110 +212,101 @@ def main_worker(gpu, ngpus_per_node, config):
 
     train_loader = torch.utils.data.DataLoader(
         combined_train_samples,
-        batch_size=1, # please keep the bs to 1. More details about the bs can be found in ```folders.py```
+        batch_size=1,
         shuffle=(train_sampler is None),
-        num_workers=config.workers,
+        num_workers=train_cfg.workers,
         drop_last=True,
         sampler=train_sampler,
         pin_memory=True,
     )
-
     test_loader = torch.utils.data.DataLoader(
         combined_test_samples,
         batch_size=1,
         shuffle=(test_sampler is None),
-        num_workers=config.workers,
+        num_workers=train_cfg.workers,
         sampler=test_sampler,
         drop_last=False,
         pin_memory=True,
     )
 
-    best_srocc, best_plcc, best_krcc, best_mae = 0.0, 0.0, 0.0, float('inf')
-    weight = {}
-    for data in train_prompt_list.keys(): # the loss weight for different datasets
-        weight[data] = 1
-        
-    for epoch in range(config.epochs):
-        if config.distributed:
+    # 训练循环
+    best_srocc, best_plcc, best_krcc, best_mae = 0.0, 0.0, 0.0, float("inf")
+    weight = {data: 1 for data in train_prompt_list.keys()}
+
+    for epoch in range(train_cfg.epochs):
+        if train_cfg.distributed:
             train_sampler.set_epoch(epoch)
             test_sampler.set_epoch(epoch)
+            
         adjust_learning_rate(optimizer, epoch, config)
 
-        # train for one epoch
-        print('Weight: ', weight)
-        pred_scores, gt_scores = train(train_loader, model, criterion, optimizer, config, epoch, weight)
-        
-        # gather all the results from all gpus
-        gt_scores = gather_together(gt_scores)  
-        gt_scores = [item for sublist in gt_scores for item in sublist]
-        pred_scores = gather_together(pred_scores) 
-        pred_scores = [item for sublist in pred_scores for item in sublist]
+        print("Weight:", weight)
+        pred_scores, gt_scores = train(train_loader, model, criterion, optimizer, train_cfg, epoch, weight)
+
+        gt_scores = [item for sublist in gather_together(gt_scores) for item in sublist]
+        pred_scores = [item for sublist in gather_together(pred_scores) for item in sublist]
         train_srocc, train_plcc, train_krcc, train_mae = cal_srocc_plcc(pred_scores, gt_scores)
 
         print(
-            "Train SROCC: {}, Train PLCC: {}, Train KRCC: {}, Train MAE: {}".format(
-                round(train_srocc, 4), round(train_plcc, 4), round(train_krcc, 4), round(train_mae, 4)
-            )
+            f"Train SROCC: {round(train_srocc, 4)}, "
+            f"Train PLCC: {round(train_plcc, 4)}, "
+            f"Train KRCC: {round(train_krcc, 4)}, "
+            f"Train MAE: {round(train_mae, 4)}"
         )
 
-        print('reshuffle data.') # reorganize the training batch
+        print("reshuffle data.")
         for d_re in train_data_list:
             d_re.reshuffle()
 
-        pred_scores, gt_scores, path = test(
-            test_loader, model
-        )
-        print('Summary---')
+        pred_scores, gt_scores, path = test(test_loader, model)
+        print("Summary---")
 
-        # gather all the testing results from all gpus
         gt_scores = gather_together(gt_scores)
-        pred_scores = gather_together(pred_scores) 
+        pred_scores = gather_together(pred_scores)
 
         gt_score_dict, pred_score_dict = {}, {}
         for sublist in gt_scores:
             for k, v in sublist.items():
-                if k not in gt_score_dict:
-                    gt_score_dict[k] = v
-                else:
-                    gt_score_dict[k] = gt_score_dict[k] + v
-        
+                gt_score_dict.setdefault(k, []).extend(v)
         for sublist in pred_scores:
             for k, v in sublist.items():
-                if k not in pred_score_dict:
-                    pred_score_dict[k] = v
-                else:
-                    pred_score_dict[k] = pred_score_dict[k] + v
+                pred_score_dict.setdefault(k, []).extend(v)
 
         gt_score_dict = dict(sorted(gt_score_dict.items()))
         test_srocc, test_plcc, test_krcc, test_mae = 0, 0, 0, 0
         for k, v in gt_score_dict.items():
+            if dataset_cfg.re_sample:
+                gt_score_dict[k] = np.mean(np.reshape(np.array(gt_score_dict[k]), (-1, dataset_cfg.re_sample_times)), axis=1)
+                pred_score_dict[k] = np.mean(np.reshape(np.array(pred_score_dict[k]), (-1, dataset_cfg.re_sample_times)), axis=1)
+                
             test_srocc_, test_plcc_, test_krcc_, test_mae_ = cal_srocc_plcc(gt_score_dict[k], pred_score_dict[k])
-            print('\t{} Dataset: {} Test SROCC: {}, PLCC: {}, KRCC: {}, MAE: {}'.format("[Zero Short]" if k not in weight else "" , k, round(test_srocc_, 4), round(test_plcc_, 4), round(test_krcc_, 4), round(test_mae_, 4)))
+            print(f'\t{"[Zero Short]" if k not in weight else ""} {k} Dataset: '
+                  f'{round(test_srocc_, 4)}, {round(test_plcc_, 4)}, '
+                  f'{round(test_krcc_, 4)}, {round(test_mae_, 4)}')
             if k in weight:
                 test_srocc += test_srocc_
                 test_plcc += test_plcc_
                 test_krcc += test_krcc_
                 test_mae += test_mae_
-            
-        print(f'AVG Performance [WO Zero Shot]: \n\tSROCC, PLCC, KLCC, MAE')
-        total_dataset = len(gt_score_dict.keys())
-        print(f'\t{test_srocc / total_dataset}, {test_plcc / total_dataset}, {test_krcc / total_dataset}, {test_mae / total_dataset}')
-        
-        if not config.multiprocessing_distributed or (
-                config.multiprocessing_distributed and config.rank % ngpus_per_node == 0
+
+        total_dataset = len(weight.keys())
+        print(f"AVG Performance [WO Zero Shot]:\n\tSROCC, PLCC, KLCC, MAE")
+        print(f"\t{test_srocc / total_dataset}, {test_plcc / total_dataset}, "
+              f"{test_krcc / total_dataset}, {test_mae / total_dataset}")
+
+        if not train_cfg.multiprocessing_distributed or (
+            train_cfg.multiprocessing_distributed and train_cfg.rank % ngpus_per_node == 0
         ):
             if test_srocc + test_plcc + test_krcc > best_srocc + best_plcc + best_krcc:
                 best_srocc, best_plcc, best_krcc, best_mae = test_srocc, test_plcc, test_krcc, best_mae
                 save_checkpoint(
-                    {
-                        "state_dict": model.module.state_dict(),
-                    },
+                    {"state_dict": model.module.state_dict()},
                     is_best=True,
-                    filename=os.path.join(config.save_path, f'best_model.pth.tar'),
+                    filename=os.path.join(train_cfg.save_path, "best_model.pth.tar"),
                 )
                 print("Best Model Saved.")
 
-    print('Best SROCC: {}, PLCC: {}'.format(best_srocc, best_plcc))
+    print(f"Best SROCC: {best_srocc}, PLCC: {best_plcc}")
 
 def test(test_loader, model):
     """Training"""
@@ -370,11 +380,8 @@ def train(train_loader, model, loss_fun, optimizer, config, epoch, weight):
     )
 
     end = time.time()
-
-    random_flipping_rate = config.random_flipping_rate
-    random_scale_rate = config.random_scale_rate
     
-    for index, (img, label, _, data_name) in enumerate(train_loader):
+    for index, (img, label, _, data_name) in enumerate(tqdm(train_loader)):
         img = img.squeeze(0)
         label = label.squeeze(0)[:, -1].view(-1).cuda()
 
@@ -405,39 +412,42 @@ def train(train_loader, model, loss_fun, optimizer, config, epoch, weight):
     progress.display(index)
 
     return pred_scores, gt_scores
+import argparse
+import yaml
+
+def load_yaml(path):
+    with open(path, "r") as f:
+        return yaml.safe_load(f)
+
+def recursive_update(d, u):
+    for k, v in u.items():
+        if isinstance(v, dict) and k in d:
+            recursive_update(d[k], v)
+        else:
+            d[k] = v
+    return d
+
+from types import SimpleNamespace
+def dict_to_namespace(d):
+    """递归把 dict 转成 SimpleNamespace，方便用点号访问"""
+    if isinstance(d, dict):
+        return SimpleNamespace(**{k: dict_to_namespace(v) for k, v in d.items()})
+    return d
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    # ===== 原 argparse 参数保留 =====
-    parser.add_argument("--seed", type=int, default=570908)
-    parser.add_argument("--dataset", nargs='+', default=None, type=str)
-    parser.add_argument("--zero_shot_dataset", nargs='+', default=[])
-    parser.add_argument("--lr", type=float, default=1e-5)
-    parser.add_argument("--weight_decay", type=float, default=1e-5)
-    parser.add_argument("--batch_size", type=int, default=44)
-    parser.add_argument("--epochs", type=int, default=50)
-    parser.add_argument("--T_max", type=int, default=50)
-    parser.add_argument("--eta_min", type=int, default=0)
-    parser.add_argument("-j", "--workers", default=32, type=int)
-    parser.add_argument("--world-size", default=-1, type=int)
-    parser.add_argument("--rank", default=-1, type=int)
-    parser.add_argument("--dist-url", default="tcp://224.66.41.62:23456", type=str)
-    parser.add_argument("--dist-backend", default="nccl", type=str)
-    parser.add_argument("--multiprocessing-distributed", action="store_true")
-    parser.add_argument("--gpu", default=None, type=int)
-    parser.add_argument("--resize_size", default=[224, 224], type=int, nargs=2)
-    parser.add_argument("--random_flipping_rate", default=0.1, type=float)
-    parser.add_argument("--random_scale_rate", default=0.5, type=float)
-    parser.add_argument("--model", default='promptiqa', type=str)
-    parser.add_argument("--save_path", type=str, default="./save_logs/Matrix_Comparation_Koniq_bs_25")
-    parser.add_argument("--config", type=str, help="YAML config file path")
-    args = parser.parse_args()
+    parser.add_argument("--config", type=str, required=True, help="YAML config file path")
+    args_cli = parser.parse_args()
 
-    if args.config:
-        yaml_cfg = load_yaml(args.config)
-        args = recursive_update(args, yaml_cfg)
+    cfg_dict = load_yaml(args_cli.config)
 
-    args.lr = float(args.lr) # 确保学习率为浮点型，防止被 YAML 字符串覆盖导致优化器报错
-    args.weight_decay = float(args.weight_decay)  # 确保权重衰减是浮点数
+    print(cfg_dict)  # 现在 cfg 中包含所有参数
 
-    main(args)
+    cfg = dict_to_namespace(cfg_dict)
+    cfg.train.config = args_cli.config
+
+    # 确保类型正确
+    cfg.optimizer.lr = float(cfg.optimizer.lr)
+    cfg.optimizer.weight_decay = float(cfg.optimizer.weight_decay)
+
+    main(cfg)

@@ -7,20 +7,35 @@ from SimpleIQA.utils.dataset.process import ToTensor, Normalize, RandHorizontalF
 class Data_Loader():
     """Dataset class for IQA databases"""
 
-    def __init__(self, batch_size, dataset, path, img_indx, istrain=True, dist_type=None, **kwargs):
-        global resize_size
-        resize_size = kwargs.get('resize_size', (224, 224))
-
+    def __init__(self, batch_size, dataset, path, img_indx, dataset_cfg, istrain=True, dist_type=None, **kwargs):
+        self.resize_size = getattr(dataset_cfg, 'resize_size', (224, 224))
+        self.num_workers = getattr(dataset_cfg, 'num_workers', 4)
+        
         self.batch_size = batch_size
         self.istrain = istrain
 
+        # if istrain:
+        #     transforms=torchvision.transforms.Compose([Resize(resize_size), Normalize(0.5, 0.5), RandHorizontalFlip(prob_aug=0.5), ToTensor()])
+        # else:
+        #     transforms=torchvision.transforms.Compose([Resize(resize_size), Normalize(0.5, 0.5), ToTensor()])
+        
+        transforms = []
         if istrain:
-            transforms=torchvision.transforms.Compose([Resize(resize_size), Normalize(0.5, 0.5), RandHorizontalFlip(prob_aug=0.5), ToTensor()])
-        else:
-            transforms=torchvision.transforms.Compose([Resize(resize_size), Normalize(0.5, 0.5), ToTensor()])
+            if getattr(dataset_cfg, 'random_flipping', False):
+                transforms.append(torchvision.transforms.RandomHorizontalFlip(p=getattr(dataset_cfg, 'random_flipping_rate', 0.5)))
 
+            if getattr(dataset_cfg, 'resize_img', False):
+                transforms.append(torchvision.transforms.Resize(size=self.resize_size))
+
+            if getattr(dataset_cfg, 'random_crop', False):
+                transforms.append(torchvision.transforms.RandomCrop(size=getattr(dataset_cfg, 'random_crop_size', (224, 224))))
+
+        transforms.append(torchvision.transforms.ToTensor())
+        transforms.append(torchvision.transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)))
+        transforms=torchvision.transforms.Compose(transforms=transforms)
+        
         if dataset == 'livec':
-            self.data = folders.LIVEC(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain)
+            self.data = folders.LIVEC(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain, dataset_cfg=dataset_cfg)
         elif dataset == 'koniq10k':
             self.data = folders.Koniq10k(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain)
         elif dataset == 'uhdiqa':
@@ -56,7 +71,7 @@ class Data_Loader():
             raise NotImplementedError()
 
     def get_data(self):
-        dataloader = torch.utils.data.DataLoader(self.data, batch_size=self.batch_size, shuffle=self.istrain, num_workers=16, drop_last=self.istrain)
+        dataloader = torch.utils.data.DataLoader(self.data, batch_size=self.batch_size, shuffle=self.istrain, num_workers=self.num_workers, drop_last=self.istrain)
         return dataloader
     
     def get_samples(self):
