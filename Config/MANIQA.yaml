@@ -1,0 +1,25 @@
+train:
+  dist_url: "tcp://localhost:12754"
+  multiprocessing_distributed: true
+  world_size: 1
+  rank: 0
+
+  batch_size: 12
+  epochs: 300
+
+  seed: 3407
+  model: maniqa
+
+optimizer:
+  optimizer: adam
+  lr: 1e-5
+  weight_decay: 1e-5
+
+loss:
+  loss: l1 # l1 mse
+
+dataset:
+  dataset: [livec]
+  resize_size: [224, 224]
+
+save_path: ./EXP/SingleDataset/maniqa

@@ -1,11 +1,10 @@
 import os
-import scipy.io
 import numpy as np
 import csv
 from openpyxl import load_workbook
 
-from PromptIQA.utils.dataset.loader_tools import *
-from PromptIQA.utils.dataset.PromptIQADataset import PromptIQADataset
+from SimpleIQA.utils.dataset.loader_tools import *
+from SimpleIQA.utils.dataset.PromptIQADataset import PromptIQADataset
 
 class LIVEC(PromptIQADataset):
     def __init__(self, root, index, transform, batch_size=11, istrain=True):

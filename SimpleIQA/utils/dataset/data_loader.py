@@ -1,25 +1,8 @@
 import torch
 import torchvision
 
-from PromptIQA.utils.dataset import folders
-from PromptIQA.utils.dataset.process import ToTensor, Normalize, RandHorizontalFlip, Resize
-
-import cv2
-import numpy as np
-
-# resize_size = None
-# def load_image(img_path):
-#     try:
-#         d_img = cv2.imread(img_path, cv2.IMREAD_COLOR)
-#         d_img = cv2.resize(d_img, resize_size, interpolation=cv2.INTER_CUBIC)
-#         d_img = cv2.cvtColor(d_img, cv2.COLOR_BGR2RGB)
-#         d_img = np.array(d_img).astype('float32') / 255
-#         d_img = np.transpose(d_img, (2, 0, 1))
-#         print('load image:', img_path, d_img.shape)
-#     except:
-#         print(img_path)
-
-#     return d_img
+from SimpleIQA.utils.dataset import folders
+from SimpleIQA.utils.dataset.process import ToTensor, Normalize, RandHorizontalFlip, Resize
 
 class Data_Loader():
     """Dataset class for IQA databases"""

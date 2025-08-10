@@ -1,5 +1,5 @@
 import torch.utils.data as data
-from PromptIQA.utils.dataset.loader_tools import *
+from SimpleIQA.utils.dataset.loader_tools import *
 
 class PromptIQADataset(data.Dataset):
     def __init__(self, dataset_name):
