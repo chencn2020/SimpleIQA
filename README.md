@@ -25,9 +25,20 @@ An efficient and user-friendly template to help researchers and practitioners tr
 
 ## Contents 📌
 
-1. [Reproducibility Baselines 🎉](#reproducibility-baselines)
+1. [Introduction 👀](#introduction)
+2. [Reproducibility Baselines 🎉](#reproducibility-baselines)
+3. [Acknowledgement 💌](#Acknowledgement)
+
+## Introduction 👀
+
+<div id="introduction"></div>
+
+This repository provides a simple and efficient framework for training Image Quality Assessment (IQA) models. Our goal is to make it easy for researchers and practitioners to develop and evaluate your own IQA models with minimal setup.
 
 ## Reproducibility Baselines 🎉
+
+<div id="reproducibility-baselines"></div>
+
 
 ### Experiments Settings
 
@@ -62,6 +73,15 @@ TBU
 </tr>
 </tbody>
 </table>
+
+## Acknowledgement 💌
+
+<div id="Acknowledgement"></div>
+
+We sincerely thank these following great public repositories:
+
+- [MoCo](https://github.com/facebookresearch/moco) and [PromptIQA](https://github.com/chencn2020/PromptIQA) : The code structure is partly based on their open repositories.
+- [HyperIQA](https://github.com/SSL92/hyperIQA), [MANIQA](https://github.com/IIGROUP/MANIQA)
 
 ## Stars ⭐️
 

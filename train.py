@@ -244,7 +244,7 @@ def main_worker(gpu, ngpus_per_node, config):
             d_re.reshuffle()
 
         pred_scores, gt_scores, path = test(
-            test_loader, model, train_prompt_list
+            test_loader, model
         )
         print('Summary---')
 
