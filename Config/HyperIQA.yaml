@@ -22,7 +22,7 @@ optimizer:
   lr_ratio: 10
 
 loss:
-  loss: l1
+  criterion: l1
 
 dataset:
   train_dataset: [livec]
@@ -36,10 +36,13 @@ dataset:
   re_sample_times: 25
 
   resize_img: false
-  resize_size: [512, 512]
+  # resize_size: [512, 512]
 
   random_crop: true
   random_crop_size: [224, 224]
+
+  # Data Normalization
+  nornalize_score: true
 
   # Loader
   num_workers: 2

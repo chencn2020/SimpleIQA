@@ -59,31 +59,38 @@ def gather_together(data: Any) -> List[Any]:
     return gather_data
 
 
-def printArgs(args: Any, savePath: str) -> None:
-    """
-    Print key–value pairs from an argument namespace to stdout and write them
-    to `args_info.log`.
+import os
+import argparse
 
-    Args:
-        args: Typically an `argparse.Namespace` containing hyperparameters.
-        savePath: Directory where `args_info.log` will be created.
+def printArgs(args: argparse.Namespace, savePath: str) -> None:
     """
+    打印并记录参数。支持顶层键为普通值或 Namespace；
+    若为 Namespace，则展开一层键值。
+    """
+    os.makedirs(savePath, exist_ok=True)
     log_path = os.path.join(savePath, "args_info.log")
-    with open(log_path, "w") as f:
+
+    with open(log_path, "w", encoding="utf-8") as f:
         print("--------------args----------------")
         f.write("--------------args----------------\n")
 
-        for arg in vars(args):
-            print(format(arg, "<20"), format(str(getattr(args, arg)), "<"))
-            f.write(
-                "{}\t{}\n".format(
-                    format(arg, "<20"),
-                    format(str(getattr(args, arg)), "<"),
-                )
-            )
+        # 遍历顶层 args（通常是 Namespace）
+        for name in vars(args):
+            val = getattr(args, name)
+
+            # 顶层一行
+            print(f"########## {name:<20} {val if not hasattr(val, '__dict__') else ''}".rstrip())
+            f.write(f"{name:<20} {val if not hasattr(val, '__dict__') else ''}\n")
+
+            # 若该值可展开（例如 argparse.Namespace），则打印其子项
+            if hasattr(val, "__dict__"):
+                for sub in vars(val):
+                    subval = getattr(val, sub)
+                    print(f"{sub + ':':<20} {subval}")
+                    f.write(f"{sub + ':':<20} {subval}\n")
 
         print("----------------------------------")
-        f.write("----------------------------------")
+        f.write("----------------------------------\n")
 
 
 def load_yaml(path: str) -> Any:
@@ -183,8 +190,9 @@ def get_data(
     path, img_total = data_info[dataset.split("_")[0]]
     img_idx: List[int] = list(range(img_total))
 
-    random.seed(split_seed)
-    random.shuffle(img_idx)
+    for split_seed in [2023, 2024, 2025, 2026, 2027, 2028]:
+        random.seed(split_seed)
+        random.shuffle(img_idx)
 
     cut = int(round(0.8 * len(img_idx)))
     train_index = img_idx[:cut]

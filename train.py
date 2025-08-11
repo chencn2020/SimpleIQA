@@ -158,15 +158,25 @@ def main_worker(gpu, ngpus_per_node, config):
             train_cfg.batch_size //= ngpus_per_node
             train_cfg.workers = int((train_cfg.workers + ngpus_per_node - 1) / ngpus_per_node)
             model = torch.nn.parallel.DistributedDataParallel(
-                model, device_ids=[train_cfg.gpu] # , find_unused_parameters=True
+                model, device_ids=[train_cfg.gpu], find_unused_parameters=True
             )
-            print("Model Distribute.")
         else:
             model.cuda()
             model = torch.nn.parallel.DistributedDataParallel(model)
 
     # 损失函数
-    criterion = nn.L1Loss().cuda(train_cfg.gpu)
+    if config.loss.criterion == "l1":
+        print("Use L1 Loss")
+        criterion = nn.L1Loss().cuda()
+    elif config.loss.criterion == "mse":
+        print("Use MSE Loss")
+        criterion = nn.MSELoss().cuda()
+    elif config.loss.criterion == "smooth_l1":
+        print("Use Smooth L1 Loss")
+        criterion = nn.SmoothL1Loss().cuda()
+    else:
+        print("config.train.criterion", config.loss.criterion)
+        raise NotImplementedError("Only L1, MSE, Smooth L1 Loss")
 
     # 优化器
     # if train_cfg.model == "hyperiqa":

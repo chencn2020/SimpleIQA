@@ -9,7 +9,9 @@ from SimpleIQA.utils.dataset.PromptIQADataset import PromptIQADataset
 
 class LIVEC(PromptIQADataset):
     def __init__(self, root, index, transform, batch_size=11, istrain=True, dataset_cfg=None, **kwargs):
-        super().__init__('livec')
+        super().__init__('livec', transform, batch_size, istrain)
+        
+        # Load the image paths and labels from the files
         imgpath = scipy.io.loadmat(os.path.join(root, 'Data', 'AllImages_release.mat'))
         imgpath = imgpath['AllImages_release']
         imgpath = imgpath[7:1169]
@@ -17,27 +19,14 @@ class LIVEC(PromptIQADataset):
         labels = mos['AllMOS_release'].astype(np.float32)
         labels = labels[0][7:1169]
 
+        # Select the samples based on the provided index
         sample, gt = [], []
         for i, item in enumerate(index):
             sample.append(os.path.join(root, 'Images', imgpath[item][0][0]))
             gt.append(labels[item])
         
-        if getattr(dataset_cfg, 're_sample', False):
-            sample = [sa for sa in sample for _ in range(getattr(dataset_cfg, 're_sample_times', 25)) ]
-            gt = [g for g in gt for _ in range(getattr(dataset_cfg, 're_sample_times', 25)) ]
-
-        gt = normalization(gt)
-        # gt = list((np.array(gt) - 1) / 100)
-        
-        self.samples_p, self.gt_p = sample, gt
-
-        self.samples, self.gt = split_array(sample, batch_size), split_array(gt, batch_size)
-        if len(self.samples[-1]) != batch_size and istrain:
-            self.samples = self.samples[:-1]
-            self.gt = self.gt[:-1]
-        self.transform = transform
-        self.batch_size = batch_size
-        self.istrain = istrain
+        # Process the data
+        self._process_data(dataset_cfg, sample, gt)
         self._print_data_info()
         
 class AIGCIQA3W(PromptIQADataset):

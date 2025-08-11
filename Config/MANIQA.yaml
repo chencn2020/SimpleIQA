@@ -1,8 +1,8 @@
 train:
-  seed: 3407
+  seed: 2023
   zero_shot_dataset: []
   batch_size: 12
-  epochs: 300
+  epochs: 50
   T_max: 50
   eta_min: 0
   workers: 32
@@ -12,8 +12,6 @@ train:
   dist_backend: "nccl"
   multiprocessing_distributed: true
   gpu: null
-  random_flipping_rate: 0.5
-  random_scale_rate: 0.5
   model: maniqa
   save_path: "./EXP/SingleDataset/maniqa"
 
@@ -23,17 +21,30 @@ optimizer:
   weight_decay: 1e-5
 
 loss:
-  loss: l1
+  criterion: mse
 
 dataset:
   train_dataset: [livec]
   zero_shot_dataset: []
 
-  re_sample: true
-  re_sample_times: 25
+  # Augmentation
+  random_flipping: true
+  random_flipping_rate: 0.5
+  
+  re_sample: false
+  # re_sample_times: 25
 
   resize_img: true
   resize_size: [224, 224]
 
-  crop_img: true
-  crop_size: [224, 224]
+  random_crop: false
+  # random_crop_size: [224, 224]
+
+  # Data Normalization
+  nornalize_score: true
+  
+  img_normalize_mean: [0.5, 0.5, 0.5]
+  img_normalize_std: [0.5, 0.5, 0.5]
+
+  # Loader
+  num_workers: 2
