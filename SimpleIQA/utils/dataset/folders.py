@@ -30,8 +30,8 @@ class LIVEC(PromptIQADataset):
         self._print_data_info()
         
 class AIGCIQA3W(PromptIQADataset):
-    def __init__(self, root, index, transform, batch_size=11, istrain=True):
-        super().__init__('aigciqa3w')
+    def __init__(self, root, index, transform, batch_size=11, istrain=True, dataset_cfg=None):
+        super().__init__('aigciqa3w', transform, batch_size, istrain)
 
         imgname = []
         mos_all = []
@@ -58,20 +58,13 @@ class AIGCIQA3W(PromptIQADataset):
         for i, item in enumerate(index):
             sample.append(os.path.join(root, 'train', imgname[item]))
             gt.append(mos_all[item])
-        gt = normalization(gt)
-        # gt = list(np.array(gt) / 1)
-        self.samples_p, self.gt_p = sample, gt
-
-        self.samples, self.gt = split_array(sample, batch_size), split_array(gt, batch_size)
-        if len(self.samples[-1]) != batch_size and istrain:
-            self.samples = self.samples[:-1]
-            self.gt = self.gt[:-1]
-        self.transform = transform
-        self.batch_size = batch_size
+        # Process the data
+        self._process_data(dataset_cfg, sample, gt)
+        self._print_data_info()
     
 class AIGCIQA2023(PromptIQADataset):
     def __init__(self, root, index, transform, batch_size=11, istrain=True):
-        super().__init__('aigciqa2023')
+        super().__init__('aigciqa2023', transform, batch_size, istrain)
         
         mos = scipy.io.loadmat(os.path.join(root, 'DATA', 'MOS', 'mosz1.mat'))
         labels = mos['MOSz'].astype(np.float32)
@@ -80,20 +73,13 @@ class AIGCIQA2023(PromptIQADataset):
         for i, item in enumerate(index):
             sample.append(os.path.join(root, 'Image', 'allimg', f'{item}.png'))
             gt.append(labels[item][0])
-        gt = normalization(gt)
-        # gt = list(np.array(gt) / 100)
-        self.samples_p, self.gt_p = sample, gt
-
-        self.samples, self.gt = split_array(sample, batch_size), split_array(gt, batch_size)
-        if len(self.samples[-1]) != batch_size and istrain:
-            self.samples = self.samples[:-1]
-            self.gt = self.gt[:-1]
-        self.transform = transform
-        self.batch_size = batch_size
+        # Process the data
+        self._process_data(dataset_cfg, sample, gt)
+        self._print_data_info()
     
 class Koniq10k(PromptIQADataset):
-    def __init__(self, root, index, transform, batch_size=11, istrain=True):
-        super().__init__('koniq10k')
+    def __init__(self, root, index, transform, batch_size=11, istrain=True, dataset_cfg=None):
+        super().__init__('koniq10k', transform, batch_size, istrain)
         
         imgname = []
         mos_all = []
@@ -109,21 +95,13 @@ class Koniq10k(PromptIQADataset):
         for i, item in enumerate(index):
             sample.append(os.path.join(root, '1024x768', imgname[item]))
             gt.append(mos_all[item])
-        gt = normalization(gt)
-        # gt = list(np.array(gt) / 100)
-
-        self.samples_p, self.gt_p = sample, gt
-
-        self.samples, self.gt = split_array(sample, batch_size), split_array(gt, batch_size)
-        if len(self.samples[-1]) != batch_size and istrain:
-            self.samples = self.samples[:-1]
-            self.gt = self.gt[:-1]
-        self.transform = transform
-        self.batch_size = batch_size
+        # Process the data
+        self._process_data(dataset_cfg, sample, gt)
+        self._print_data_info()
 
 class uhdiqa(PromptIQADataset):
-    def __init__(self, root, index, transform, batch_size=11, istrain=True):
-        super().__init__('udhiqa')
+    def __init__(self, root, index, transform, batch_size=11, istrain=True, dataset_cfg=None):
+        super().__init__('udhiqa', transform, batch_size, istrain)
         
         imgname = []
         mos_all = []
@@ -139,20 +117,13 @@ class uhdiqa(PromptIQADataset):
         for i, item in enumerate(index):
             sample.append(os.path.join(root, 'challenge/training', imgname[item]))
             gt.append(mos_all[item])
-        gt = normalization(gt)
-
-        self.samples_p, self.gt_p = sample, gt
-
-        self.samples, self.gt = split_array(sample, batch_size), split_array(gt, batch_size)
-        if len(self.samples[-1]) != batch_size and istrain:
-            self.samples = self.samples[:-1]
-            self.gt = self.gt[:-1]
-        self.transform = transform
-        self.batch_size = batch_size
+        # Process the data
+        self._process_data(dataset_cfg, sample, gt)
+        self._print_data_info()
         
 class CGIQA6k(PromptIQADataset):
-    def __init__(self, root, index, transform, batch_size=11, istrain=True):
-        super().__init__('cgiqa6k')
+    def __init__(self, root, index, transform, batch_size=11, istrain=True, dataset_cfg=None):
+        super().__init__('cgiqa6k', transform, batch_size, istrain)
         
         imgname = []
         mos_all = []
@@ -168,20 +139,13 @@ class CGIQA6k(PromptIQADataset):
         for i, item in enumerate(index):
             sample.append(os.path.join(root, 'database', imgname[item]))
             gt.append(mos_all[item])
-        gt = normalization(gt)
-
-        self.samples_p, self.gt_p = sample, gt
-
-        self.samples, self.gt = split_array(sample, batch_size), split_array(gt, batch_size)
-        if len(self.samples[-1]) != batch_size and istrain:
-            self.samples = self.samples[:-1]
-            self.gt = self.gt[:-1]
-        self.transform = transform
-        self.batch_size = batch_size
+        # Process the data
+        self._process_data(dataset_cfg, sample, gt)
+        self._print_data_info()
     
 class CSIQ(PromptIQADataset):
-    def __init__(self, root, index, transform, patch_num=1, batch_size=11, istrain=True, dist_type=None):
-        super().__init__('csiq')
+    def __init__(self, root, index, transform, patch_num=1, batch_size=11, istrain=True, dist_type=None, dataset_cfg=None):
+        super().__init__('csiq', transform, batch_size, istrain)
         
         refpath = os.path.join(root, 'src_imgs')
         refname = getFileName(refpath, '.png')
@@ -219,22 +183,13 @@ class CSIQ(PromptIQADataset):
                 for aug in range(patch_num):
                     sample.append(os.path.join(root, 'dst_imgs_all', imgnames[item]))
                     gt.append(labels[item])
-        gt = normalization(gt, True)
-        # gt = list(np.array(gt) / 1)
-        self.samples_p, self.gt_p = sample, gt
-
-        self.samples, self.gt = split_array(sample, batch_size), split_array(gt, batch_size)
-        if len(self.samples[-1]) != batch_size and istrain:
-            self.samples = self.samples[:-1]
-            self.gt = self.gt[:-1]
-        self.transform = transform
-        self.batch_size = batch_size
-        
-        self.dist_type = dist_type
+        # Process the data
+        self._process_data(dataset_cfg, sample, gt, True)
+        self._print_data_info()
     
 class TID2013Folder(PromptIQADataset):
-    def __init__(self, root, index, transform, patch_num=1, batch_size=11, istrain=False):
-        super().__init__('tid2013')
+    def __init__(self, root, index, transform, patch_num=1, batch_size=11, istrain=False, dataset_cfg=None):
+        super().__init__('tid2013', transform, batch_size, istrain)
         
         refpath = os.path.join(root, 'reference_images')
         refname = getTIDFileName(refpath, '.bmp.BMP')
@@ -263,20 +218,13 @@ class TID2013Folder(PromptIQADataset):
                 for aug in range(patch_num):
                     sample.append(os.path.join(root, 'distorted_images', imgnames[item]))
                     gt.append(labels[item])
-        gt = normalization(gt)
-        # gt = list(np.array(gt) / 9)
-        self.samples_p, self.gt_p = sample, gt
-
-        self.samples, self.gt = split_array(sample, batch_size), split_array(gt, batch_size)
-        if len(self.samples[-1]) != batch_size and istrain:
-            self.samples = self.samples[:-1]
-            self.gt = self.gt[:-1]
-        self.transform = transform
-        self.batch_size = batch_size
+        # Process the data
+        self._process_data(dataset_cfg, sample, gt)
+        self._print_data_info()
     
 class KADID(PromptIQADataset):
-    def __init__(self, root, index, transform, batch_size=11, istrain=True):
-        super().__init__('kadid')
+    def __init__(self, root, index, transform, batch_size=11, istrain=True, dataset_cfg=None):
+        super().__init__('kadid', transform, batch_size, istrain)
         
         imgpath = os.path.join(root, 'images')
         csv_file = os.path.join(root, 'dmos.csv')
@@ -289,21 +237,13 @@ class KADID(PromptIQADataset):
                     sample.append(os.path.join(imgpath, row['dist_img']))
                     mos = np.array(float(row['dmos'])).astype(np.float32)
                     gt.append(mos)
-        gt = normalization(gt)
-        # gt = list((np.array(gt) - 1) / 5)
-
-        self.samples_p, self.gt_p = sample, gt
-
-        self.samples, self.gt = split_array(sample, batch_size), split_array(gt, batch_size)
-        if len(self.samples[-1]) != batch_size and istrain:
-            self.samples = self.samples[:-1]
-            self.gt = self.gt[:-1]
-        self.transform = transform
-        self.batch_size = batch_size
+        # Process the data
+        self._process_data(dataset_cfg, sample, gt)
+        self._print_data_info()
   
 class LIVEFolder(PromptIQADataset):
-    def __init__(self, root, index, transform, batch_size=11, istrain=False):
-        super().__init__('live')
+    def __init__(self, root, index, transform, batch_size=11, istrain=False, dataset_cfg=None):
+        super().__init__('live', transform, batch_size, istrain)
 
         refpath = os.path.join(root, 'refimgs')
         refname = getFileName(refpath, '.bmp')
@@ -344,16 +284,9 @@ class LIVEFolder(PromptIQADataset):
                 sample.append(imgpath[item])
                 gt.append(labels[0][item])
                 
-        gt = normalization(gt, True)
-        # gt =list((np.array(gt) - 1) / 100)
-        self.samples_p, self.gt_p = sample, gt
-
-        self.samples, self.gt = split_array(sample, batch_size), split_array(gt, batch_size)
-        if len(self.samples[-1]) != batch_size and istrain:
-            self.samples = self.samples[:-1]
-            self.gt = self.gt[:-1]
-        self.transform = transform
-        self.batch_size = batch_size
+        # Process the data
+        self._process_data(dataset_cfg, sample, gt, True)
+        self._print_data_info()
         
     def getDistortionTypeFileName(self, path, num):
         filename = []
@@ -372,8 +305,8 @@ class LIVEFolder(PromptIQADataset):
             self.gt = self.gt[:-1]
 
 class SPAQ(PromptIQADataset):
-    def __init__(self, root, index, transform,  batch_size=11, istrain=False, column=2):
-        super().__init__(f'spaq_{column}')
+    def __init__(self, root, index, transform,  batch_size=11, istrain=False, column=2, dataset_cfg=None):
+        super().__init__(f'spaq_{column}', transform, batch_size, istrain)
         
         sample = []
         gt = []
@@ -391,20 +324,13 @@ class SPAQ(PromptIQADataset):
                 gt.append(mos)
             if count == 11126:
                 break
-        gt = normalization(gt)
-        # gt = list(np.array(gt) / 100)
-        self.samples_p, self.gt_p = sample, gt
-
-        self.samples, self.gt = split_array(sample, batch_size), split_array(gt, batch_size)
-        if len(self.samples[-1]) != batch_size and istrain:
-            self.samples = self.samples[:-1]
-            self.gt = self.gt[:-1]
-        self.transform = transform
-        self.batch_size = batch_size
+        # Process the data
+        self._process_data(dataset_cfg, sample, gt)
+        self._print_data_info()
         
 class UWIQA(PromptIQADataset):
-    def __init__(self, root, index, transform, batch_size=11, istrain=False):
-        super().__init__('uwiqa')
+    def __init__(self, root, index, transform, batch_size=11, istrain=False, dataset_cfg=None):
+        super().__init__('uwiqa', transform, batch_size, istrain)
         
         sample = []
         gt = []
@@ -422,20 +348,13 @@ class UWIQA(PromptIQADataset):
                 mos = mos.astype(np.float32)
                 gt.append(mos)
 
-        gt = normalization(gt)
-        # gt = list(np.array(gt) / 1)
-        self.samples_p, self.gt_p = sample, gt
-
-        self.samples, self.gt = split_array(sample, batch_size), split_array(gt, batch_size)
-        if len(self.samples[-1]) != batch_size and istrain:
-            self.samples = self.samples[:-1]
-            self.gt = self.gt[:-1]
-        self.transform = transform
-        self.batch_size = batch_size
+        # Process the data
+        self._process_data(dataset_cfg, sample, gt)
+        self._print_data_info()
     
 class BID(PromptIQADataset):
-    def __init__(self, root, index, transform, batch_size=11, istrain=False):
-        super().__init__('bid')
+    def __init__(self, root, index, transform, batch_size=11, istrain=False, dataset_cfg=None):
+        super().__init__('bid', transform, batch_size, istrain)
 
         imgname = []
         mos_all = []
@@ -461,20 +380,13 @@ class BID(PromptIQADataset):
         for i, item in enumerate(index):
             sample.append(os.path.join(root, 'ImageDatabase', imgname[item]))
             gt.append(mos_all[item])
-        gt = normalization(gt)
-        # gt = list(np.array(gt) / 9)
-        self.samples_p, self.gt_p = sample, gt
-
-        self.samples, self.gt = split_array(sample, batch_size), split_array(gt, batch_size)
-        if len(self.samples[-1]) != batch_size and istrain:
-            self.samples = self.samples[:-1]
-            self.gt = self.gt[:-1]
-        self.transform = transform
-        self.batch_size = batch_size
+        # Process the data
+        self._process_data(dataset_cfg, sample, gt)
+        self._print_data_info()
     
 class GFIQA_20k(PromptIQADataset):
-    def __init__(self, root, index, transform, batch_size=11, istrain=True):
-        super().__init__('gfiqa_20k')
+    def __init__(self, root, index, transform, batch_size=11, istrain=True, dataset_cfg=None):
+        super().__init__('gfiqa_20k', transform, batch_size, istrain)
         
         imgname = []
         mos_all = []
@@ -491,21 +403,13 @@ class GFIQA_20k(PromptIQADataset):
         for i, item in enumerate(index):
             sample.append(os.path.join(img_path, imgname[item]))
             gt.append(mos_all[item])
-        gt = normalization(gt)
-        # gt = list(np.array(gt) / 1)
-
-        self.samples_p, self.gt_p = sample, gt
-
-        self.samples, self.gt = split_array(sample, batch_size), split_array(gt, batch_size)
-        if len(self.samples[-1]) != batch_size and istrain:
-            self.samples = self.samples[:-1]
-            self.gt = self.gt[:-1]
-        self.transform = transform
-        self.batch_size = batch_size
+        # Process the data
+        self._process_data(dataset_cfg, sample, gt)
+        self._print_data_info()
     
 class AGIQA_3k(PromptIQADataset):
-    def __init__(self, root, index, transform, batch_size=11, istrain=True):
-        super().__init__('agiqa_3k')
+    def __init__(self, root, index, transform, batch_size=11, istrain=True, dataset_cfg=None):
+        super().__init__('agiqa_3k', transform, batch_size, istrain)
         
         imgname = []
         mos_all = []
@@ -522,14 +426,6 @@ class AGIQA_3k(PromptIQADataset):
         for i, item in enumerate(index):
             sample.append(os.path.join(img_path, imgname[item]))
             gt.append(mos_all[item])
-        gt = normalization(gt)
-        # gt = list(np.array(gt) / 5)
-
-        self.samples_p, self.gt_p = sample, gt
-
-        self.samples, self.gt = split_array(sample, batch_size), split_array(gt, batch_size)
-        if len(self.samples[-1]) != batch_size and istrain:
-            self.samples = self.samples[:-1]
-            self.gt = self.gt[:-1]
-        self.transform = transform
-        self.batch_size = batch_size
+        # Process the data
+        self._process_data(dataset_cfg, sample, gt)
+        self._print_data_info()

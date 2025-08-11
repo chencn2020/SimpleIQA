@@ -96,6 +96,10 @@ def main(config):
 
     print("End Time: ", time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
 
+def _align_for_resample(x, times):
+    n = (len(x) // times) * times
+    return x[:n]
+
 def main_worker(gpu, ngpus_per_node, config):
     train_cfg = config.train
     opt_cfg = config.optimizer
@@ -158,7 +162,7 @@ def main_worker(gpu, ngpus_per_node, config):
             train_cfg.batch_size //= ngpus_per_node
             train_cfg.workers = int((train_cfg.workers + ngpus_per_node - 1) / ngpus_per_node)
             model = torch.nn.parallel.DistributedDataParallel(
-                model, device_ids=[train_cfg.gpu], find_unused_parameters=True
+                model, device_ids=[train_cfg.gpu], #find_unused_parameters=True
             )
         else:
             model.cuda()
@@ -178,14 +182,6 @@ def main_worker(gpu, ngpus_per_node, config):
         print("config.train.criterion", config.loss.criterion)
         raise NotImplementedError("Only L1, MSE, Smooth L1 Loss")
 
-    # 优化器
-    # if train_cfg.model == "hyperiqa":
-    #     backbone_params = list(map(id, model.module.res.parameters()))
-    #     hypernet_params = filter(lambda p: id(p) not in backbone_params, model.module.parameters())
-    #     paras = [{'params': hypernet_params, 'lr': opt_cfg.lr * opt_cfg.lr_ratio},
-    #              {'params': model.module.res.parameters(), 'lr': opt_cfg.lr}]
-    #     optimizer = torch.optim.Adam(paras, weight_decay=opt_cfg.weight_decay)
-    # else:
     optimizer = torch.optim.Adam(
         model.parameters(),
         lr=opt_cfg.lr,
@@ -226,7 +222,7 @@ def main_worker(gpu, ngpus_per_node, config):
     print("test_dataset", len(combined_test_samples))
 
     train_sampler = torch.utils.data.distributed.DistributedSampler(combined_train_samples)
-    test_sampler = torch.utils.data.distributed.DistributedSampler(combined_test_samples)
+    test_sampler = torch.utils.data.distributed.DistributedSampler(combined_test_samples, shuffle=False, drop_last=False)
 
     train_loader = torch.utils.data.DataLoader(
         combined_train_samples,
@@ -240,7 +236,7 @@ def main_worker(gpu, ngpus_per_node, config):
     test_loader = torch.utils.data.DataLoader(
         combined_test_samples,
         batch_size=1,
-        shuffle=(test_sampler is None),
+        shuffle=False,
         num_workers=train_cfg.workers,
         sampler=test_sampler,
         drop_last=False,
@@ -294,11 +290,17 @@ def main_worker(gpu, ngpus_per_node, config):
         test_srocc, test_plcc, test_krcc, test_mae = 0, 0, 0, 0
         for k, v in gt_score_dict.items():
             if dataset_cfg.re_sample:
-                gt_score_dict[k] = np.mean(np.reshape(np.array(gt_score_dict[k]), (-1, dataset_cfg.re_sample_times)), axis=1)
-                pred_score_dict[k] = np.mean(np.reshape(np.array(pred_score_dict[k]), (-1, dataset_cfg.re_sample_times)), axis=1)
+                gt = _align_for_resample(gt_score_dict[k], dataset_cfg.re_sample_times)
+                pred = _align_for_resample(pred_score_dict[k], dataset_cfg.re_sample_times)
+                gt_score_dict[k] = np.mean(
+                    np.reshape(np.array(gt), (-1, dataset_cfg.re_sample_times)), axis=1
+                )
+                pred_score_dict[k] = np.mean(
+                    np.reshape(np.array(pred), (-1, dataset_cfg.re_sample_times)), axis=1
+                )
             
             test_srocc_, test_plcc_, test_krcc_, test_mae_ = cal_srocc_plcc(gt_score_dict[k], pred_score_dict[k])
-            print(f'\t{"[Zero Short]" if k not in weight else ""} {k} Dataset: '
+            print(f'\t{"[Zero Short]" if k not in weight else ""} {k} Dataset [{len(gt_score_dict[k])} samples]: '
                   f'{round(test_srocc_, 4)}, {round(test_plcc_, 4)}, '
                   f'{round(test_krcc_, 4)}, {round(test_mae_, 4)}')
             if k in weight:
@@ -345,7 +347,7 @@ def test(test_loader, model):
 
     model.train(False)
     with torch.no_grad():
-        for index, (img_or, label_or, paths, dataset_type) in enumerate(tqdm(test_loader)):
+        for index, (img_or, label_or, paths, dataset_type) in enumerate((test_loader)):
             dataset_type = dataset_type[0]
             # prompt_dataset = promt_data_loader[dataset_type]
             t = time.time()
@@ -399,7 +401,7 @@ def train(train_loader, model, loss_fun, optimizer, config, epoch, weight):
 
     end = time.time()
     
-    for index, (img, label, _, data_name) in enumerate(tqdm(train_loader)):
+    for index, (img, label, _, data_name) in enumerate((train_loader)):
         img = img.squeeze(0)
         label = label.squeeze(0)[:, -1].view(-1).cuda()
 
@@ -427,6 +429,7 @@ def train(train_loader, model, loss_fun, optimizer, config, epoch, weight):
 
         if index % 100 == 0:
             progress.display(index)
+        
     progress.display(index)
 
     return pred_scores, gt_scores

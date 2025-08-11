@@ -37,36 +37,36 @@ class Data_Loader():
         if dataset == 'livec':
             self.data = folders.LIVEC(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain, dataset_cfg=dataset_cfg)
         elif dataset == 'koniq10k':
-            self.data = folders.Koniq10k(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain)
+            self.data = folders.Koniq10k(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain, dataset_cfg=dataset_cfg)
         elif dataset == 'uhdiqa':
-            self.data = folders.uhdiqa(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain)
+            self.data = folders.uhdiqa(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain, dataset_cfg=dataset_cfg)
         elif dataset == 'bid':
-            self.data = folders.BID(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain)
+            self.data = folders.BID(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain, dataset_cfg=dataset_cfg)
         elif 'spaq' in dataset:
             train_idx = int(dataset.split('_')[-1])
-            self.data = folders.SPAQ(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain, column=train_idx)
+            self.data = folders.SPAQ(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain, column=train_idx, dataset_cfg=dataset_cfg)
         elif dataset == 'flive':
-            self.data = folders.FLIVE(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain)
+            self.data = folders.FLIVE(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain, dataset_cfg=dataset_cfg)
         elif dataset == 'csiq':
-            self.data = folders.CSIQ(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain, dist_type=dist_type)
+            self.data = folders.CSIQ(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain, dist_type=dist_type, dataset_cfg=dataset_cfg)
         elif dataset == 'live':
-            self.data = folders.LIVEFolder(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain)
+            self.data = folders.LIVEFolder(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain, dataset_cfg=dataset_cfg)
         elif dataset == 'tid2013':
-            self.data = folders.TID2013Folder(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain)
+            self.data = folders.TID2013Folder(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain, dataset_cfg=dataset_cfg)
         elif dataset == 'kadid':
-            self.data = folders.KADID(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain)
+            self.data = folders.KADID(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain, dataset_cfg=dataset_cfg)
         elif dataset == 'gfiqa_20k':
-            self.data = folders.GFIQA_20k(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain)
+            self.data = folders.GFIQA_20k(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain, dataset_cfg=dataset_cfg)
         elif dataset == 'agiqa_3k':
-            self.data = folders.AGIQA_3k(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain)
+            self.data = folders.AGIQA_3k(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain, dataset_cfg=dataset_cfg)
         elif dataset == 'aigciqa2023':
-            self.data = folders.AIGCIQA2023(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain)
+            self.data = folders.AIGCIQA2023(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain, dataset_cfg=dataset_cfg)
         elif dataset == 'uwiqa':
-            self.data = folders.UWIQA(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain)
+            self.data = folders.UWIQA(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain, dataset_cfg=dataset_cfg)
         elif dataset == 'cgiqa6k':
-            self.data = folders.CGIQA6k(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain)
+            self.data = folders.CGIQA6k(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain, dataset_cfg=dataset_cfg)
         elif dataset == 'aigciqa3w':
-            self.data = folders.AIGCIQA3W(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain)
+            self.data = folders.AIGCIQA3W(root=path, index=img_indx, transform=transforms, batch_size=batch_size, istrain=istrain, dataset_cfg=dataset_cfg)
         else:
             raise NotImplementedError()
     

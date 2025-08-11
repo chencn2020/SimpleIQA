@@ -30,13 +30,13 @@ class PromptIQADataset(data.Dataset):
     def get_promt(self, n=10, sample_type='fix'):
         return get_prompt(self.samples_p, self.gt_p, self.transform, n, self.__len__(), sample_type=sample_type)
 
-    def _process_data(self, dataset_cfg, sample, gt):
+    def _process_data(self, dataset_cfg, sample, gt, reverse_score=False):
         if getattr(dataset_cfg, 're_sample', False):
             sample = [sa for sa in sample for _ in range(getattr(dataset_cfg, 're_sample_times', 25)) ]
             gt = [g for g in gt for _ in range(getattr(dataset_cfg, 're_sample_times', 25)) ]
 
         if getattr(dataset_cfg, 'nornalize_score', False):
-            gt = normalization(gt)
+            gt = normalization(gt, reverse_score)
             
         self.samples_p, self.gt_p = sample, gt
         self.samples, self.gt = split_array(sample, self.batch_size), split_array(gt, self.batch_size)
