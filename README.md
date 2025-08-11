@@ -12,7 +12,8 @@ An efficient and user-friendly template to help researchers and practitioners tr
 :rocket:  :rocket: :rocket: **News:**
 
 - To be updated...
-- ✅ **Jul. 19, 2024**: We create this repository.
+- ✅ **Aug. 11, 2025**: We make this repository publicly available.
+- ✅ **Jul. 19, 2025**: We create this repository.
 
 ## TODO List 📝
 
