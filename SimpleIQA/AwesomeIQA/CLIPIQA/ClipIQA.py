@@ -141,7 +141,7 @@ class CLIPIQA(nn.Module):
     ) -> None:
         super().__init__()
 
-        self.clip_model = [load(backbone, 'cpu')]  # avoid saving clip weights
+        self.clip_model = load(backbone, 'cpu')  # avoid saving clip weights
         # Different from original paper, we assemble multiple prompts to improve performance
         self.prompt_pairs = clip.tokenize(
             [
@@ -161,10 +161,10 @@ class CLIPIQA(nn.Module):
         self.model_type = model_type
         self.pos_embedding = pos_embedding
         if 'clipiqa+' in model_type:
-            self.prompt_learner = PromptLearner(self.clip_model[0])
+            self.prompt_learner = PromptLearner(self.clip_model)
 
-        for p in self.clip_model[0].parameters():
-            p.requires_grad = False
+        # for p in self.clip_model.parameters():
+        #     p.requires_grad = False
 
     def forward(self, x):
         """
@@ -177,7 +177,7 @@ class CLIPIQA(nn.Module):
             torch.Tensor: The output probabilities.
         """
         # preprocess image
-        clip_model = self.clip_model[0].to(x)
+        clip_model = self.clip_model.to(x)
 
         if self.model_type == 'clipiqa':
             prompts = self.prompt_pairs.to(x.device)

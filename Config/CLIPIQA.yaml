@@ -1,7 +1,7 @@
 train:
-  seed: 2023
+  seed: 2025
   zero_shot_dataset: []
-  batch_size: 196
+  batch_size: 96
   epochs: 300
   T_max: 50
   eta_min: 0

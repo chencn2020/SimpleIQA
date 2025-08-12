@@ -165,7 +165,7 @@ def main_worker(gpu, ngpus_per_node, config):
             train_cfg.batch_size //= ngpus_per_node
             train_cfg.workers = int((train_cfg.workers + ngpus_per_node - 1) / ngpus_per_node)
             model = torch.nn.parallel.DistributedDataParallel(
-                model, device_ids=[train_cfg.gpu], #find_unused_parameters=True
+                model, device_ids=[train_cfg.gpu], find_unused_parameters=True
             )
         else:
             model.cuda()

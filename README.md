@@ -97,7 +97,7 @@ TBU
 We sincerely thank these following great public repositories:
 
 - [MoCo](https://github.com/facebookresearch/moco) and [PromptIQA](https://github.com/chencn2020/PromptIQA) : The code structure is partly based on their open repositories.
-- [IQA-PyTorch](https://github.com/chaofengc/IQA-PyTorch): This project is inspired by the great repository.
+- [IQA-PyTorch](https://github.com/chaofengc/IQA-PyTorch): This project is inspired by the great repository. And parts of the model architecture (CLIPIQA+) are adapted from it.
 - [HyperIQA](https://github.com/SSL92/hyperIQA), [MANIQA](https://github.com/IIGROUP/MANIQA)
 
 ## Stars ⭐️
