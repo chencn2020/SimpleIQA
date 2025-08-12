@@ -22,6 +22,7 @@ from SimpleIQA.AwesomeIQA.MobileIQA import MobileViT_IQA
 from SimpleIQA.AwesomeIQA.CLIPIQA import ClipIQA
 from SimpleIQA.AwesomeIQA.HyperIQA import HyperIQA
 from SimpleIQA.AwesomeIQA.TeacherIQA import studentNetwork as SN
+from SimpleIQA.AwesomeIQA.TOPIQ_NR import topiq_arch as TOPIQ_NR
 
 from tqdm import tqdm
 
@@ -153,6 +154,8 @@ def main_worker(gpu, ngpus_per_node, config):
         model = HyperIQA.HyperNet(16, 112, 224, 112, 56, 28, 14, 7)
     elif train_cfg.model == "teacheriqa":
         model = SN.StudentNetwork()
+    elif train_cfg.model == "topiq_nr":
+        model = TOPIQ_NR.CFANet(semantic_model_name='resnet50', model_name='cfanet_nr_res50', backbone_pretrain=True)
     else:
         print("config.model", train_cfg.model)
         raise NotImplementedError("Only PromptIQA")

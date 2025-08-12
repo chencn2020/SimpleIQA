@@ -15,38 +15,11 @@ import torch.nn.functional as F
 import torchvision.transforms.functional as TF
 
 import timm
-from .constants import (
-    IMAGENET_DEFAULT_MEAN,
-    IMAGENET_DEFAULT_STD,
-    OPENAI_CLIP_MEAN,
-    OPENAI_CLIP_STD,
-)
-from pyiqa.utils.registry import ARCH_REGISTRY
-from pyiqa.utils.download_util import DEFAULT_CACHE_DIR
-from pyiqa.archs.arch_util import dist_to_mos, load_pretrained_network, uniform_crop
 
 import copy
-from .clip_model import load
 from .topiq_swin import create_swin
 
-from facexlib.utils.face_restoration_helper import FaceRestoreHelper
 import warnings
-from pyiqa.archs.arch_util import get_url_from_name
-
-
-default_model_urls = {
-    'cfanet_fr_kadid_res50': get_url_from_name('cfanet_fr_kadid_res50-2c4cc61d.pth'),
-    'cfanet_fr_pipal_res50': get_url_from_name('cfanet_fr_pipal_res50-69bbe5ba.pth'),
-    'cfanet_nr_flive_res50': get_url_from_name('cfanet_nr_flive_res50-ded1c74e.pth'),
-    'cfanet_nr_koniq_res50': get_url_from_name('cfanet_nr_koniq_res50-9a73138b.pth'),
-    'cfanet_nr_spaq_res50': get_url_from_name('cfanet_nr_spaq_res50-a7f799ac.pth'),
-    'cfanet_iaa_ava_res50': get_url_from_name('cfanet_iaa_ava_res50-3cd62bb3.pth'),
-    'cfanet_iaa_ava_swin': get_url_from_name('cfanet_iaa_ava_swin-393b41b4.pth'),
-    'topiq_nr_gfiqa_res50': get_url_from_name('topiq_nr_gfiqa_res50-d76bf1ae.pth'),
-    'topiq_nr_cgfiqa_res50': get_url_from_name('topiq_nr_cgfiqa_res50-0a8b8e4f.pth'),
-    'topiq_nr_cgfiqa_swin': get_url_from_name('topiq_nr_gfiqa_swin-7bb80a60.pth'),
-}
-
 
 def _get_clones(module, N):
     return nn.ModuleList([copy.deepcopy(module) for i in range(N)])
@@ -191,7 +164,6 @@ class GatedConv(nn.Module):
         return x1 * weight
 
 
-@ARCH_REGISTRY.register()
 class CFANet(nn.Module):
     def __init__(
         self,
@@ -199,7 +171,7 @@ class CFANet(nn.Module):
         model_name='cfanet_nr_koniq_res50',
         backbone_pretrain=True,
         in_size=None,
-        use_ref=True,
+        use_ref=False,
         num_class=1,
         num_crop=1,
         crop_size=256,
@@ -209,13 +181,10 @@ class CFANet(nn.Module):
         dprate=0.1,
         activation='gelu',
         pretrained=True,
-        pretrained_model_path=None,
         out_act=False,
         block_pool='weighted_avg',
         test_img_size=None,
         align_crop_face=True,
-        default_mean=IMAGENET_DEFAULT_MEAN,
-        default_std=IMAGENET_DEFAULT_STD,
     ):
         super().__init__()
 
@@ -248,11 +217,6 @@ class CFANet(nn.Module):
             ]
             feature_dim_list = feature_dim_list[1:] + [feature_dim]
             all_feature_dim = sum(feature_dim_list)
-        elif 'clip' in semantic_model_name:
-            semantic_model_name = semantic_model_name.replace('clip_', '')
-            self.semantic_model = [load(semantic_model_name, 'cpu')]
-            feature_dim_list = self.semantic_model[0].visual.feature_dim_list
-            default_mean, default_std = OPENAI_CLIP_MEAN, OPENAI_CLIP_STD
         else:
             self.semantic_model = timm.create_model(
                 semantic_model_name, pretrained=backbone_pretrain, features_only=True
@@ -262,8 +226,6 @@ class CFANet(nn.Module):
             all_feature_dim = sum(feature_dim_list)
             self.fix_bn(self.semantic_model)
 
-        self.default_mean = torch.Tensor(default_mean).view(1, 3, 1, 1)
-        self.default_std = torch.Tensor(default_std).view(1, 3, 1, 1)
 
         # =============================================================
         # define self-attention and cross scale attention blocks
@@ -365,38 +327,14 @@ class CFANet(nn.Module):
         self._init_linear(self.attn_blks)
         self._init_linear(self.attn_pool)
 
-        if pretrained_model_path is not None:
-            load_pretrained_network(
-                self, pretrained_model_path, False, weight_keys='params'
-            )
-        elif pretrained:
-            load_pretrained_network(
-                self, default_model_urls[model_name], True, weight_keys='params'
-            )
-
         self.eps = 1e-8
         self.crops = num_crop
-
-        if 'gfiqa' in model_name:
-            self.face_helper = FaceRestoreHelper(
-                1,
-                face_size=512,
-                crop_ratio=(1, 1),
-                det_model='retinaface_resnet50',
-                save_ext='png',
-                use_parse=True,
-                model_rootpath=DEFAULT_CACHE_DIR,
-            )
 
     def _init_linear(self, m):
         for module in m.modules():
             if isinstance(module, nn.Linear):
                 nn.init.kaiming_normal_(module.weight.data)
                 nn.init.constant_(module.bias.data, 0)
-
-    def preprocess(self, x):
-        x = (x - self.default_mean.to(x)) / self.default_std.to(x)
-        return x
 
     def fix_bn(self, model):
         for m in model.modules():
@@ -428,19 +366,6 @@ class CFANet(nn.Module):
         return torch.sqrt((x - y) ** 2 + eps)
 
     def forward_cross_attention(self, x, y=None):
-        # resize image when testing
-        if not self.training:
-            if 'swin' in self.semantic_model_name:
-                x = TF.resize(
-                    x, [384, 384], antialias=True
-                )  # swin require square inputs
-            elif self.test_img_size is not None:
-                x = TF.resize(x, self.test_img_size, antialias=True)
-
-        x = self.preprocess(x)
-        if self.use_ref:
-            y = self.preprocess(y)
-
         if 'swin' in self.semantic_model_name:
             dist_feat_list = self.get_swin_feature(self.semantic_model, x)
             if self.use_ref:
@@ -550,23 +475,24 @@ class CFANet(nn.Module):
         else:
             y = None
 
-        if 'gfiqa' in self.model_name:
-            if self.align_crop_face:
-                x = self.preprocess_face(x)
-
-        if self.crops > 1 and not self.training:
-            bsz = x.shape[0]
-            if y is not None:
-                x, y = uniform_crop([x, y], self.crop_size, self.crops)
-            else:
-                x = uniform_crop([x], self.crop_size, self.crops)[0]
-
-            score = self.forward_cross_attention(x, y)
-            score = score.reshape(bsz, self.crops, self.num_class)
-            score = score.mean(dim=1)
-        else:
-            score = self.forward_cross_attention(x, y)
+        score = self.forward_cross_attention(x, y)
 
         mos = dist_to_mos(score)
 
         return mos
+    
+def dist_to_mos(dist_score: torch.Tensor) -> torch.Tensor:
+    """
+    Convert distribution prediction to MOS score.
+    For datasets with detailed score labels, such as AVA.
+
+    Args:
+        dist_score (torch.Tensor): (*, C), C is the class number.
+
+    Returns:
+        torch.Tensor: (*, 1) MOS score.
+    """
+    num_classes = dist_score.shape[-1]
+    mos_score = dist_score * torch.arange(1, num_classes + 1).to(dist_score)
+    mos_score = mos_score.sum(dim=-1, keepdim=True)
+    return mos_score

@@ -190,9 +190,8 @@ def get_data(
     path, img_total = data_info[dataset.split("_")[0]]
     img_idx: List[int] = list(range(img_total))
 
-    for split_seed in [2023, 2024, 2025, 2026, 2027, 2028]:
-        random.seed(split_seed)
-        random.shuffle(img_idx)
+    random.seed(split_seed)
+    random.shuffle(img_idx)
 
     cut = int(round(0.8 * len(img_idx)))
     train_index = img_idx[:cut]
