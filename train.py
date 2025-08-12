@@ -21,6 +21,7 @@ from SimpleIQA.AwesomeIQA.MANIQA import maniqa
 from SimpleIQA.AwesomeIQA.MobileIQA import MobileViT_IQA
 from SimpleIQA.AwesomeIQA.CLIPIQA import ClipIQA
 from SimpleIQA.AwesomeIQA.HyperIQA import HyperIQA
+from SimpleIQA.AwesomeIQA.TeacherIQA import studentNetwork as SN
 
 from tqdm import tqdm
 
@@ -150,6 +151,8 @@ def main_worker(gpu, ngpus_per_node, config):
         model = ClipIQA.CLIPIQA()
     elif train_cfg.model == "hyperiqa":
         model = HyperIQA.HyperNet(16, 112, 224, 112, 56, 28, 14, 7)
+    elif train_cfg.model == "teacheriqa":
+        model = SN.StudentNetwork()
     else:
         print("config.model", train_cfg.model)
         raise NotImplementedError("Only PromptIQA")
@@ -182,11 +185,14 @@ def main_worker(gpu, ngpus_per_node, config):
         print("config.train.criterion", config.loss.criterion)
         raise NotImplementedError("Only L1, MSE, Smooth L1 Loss")
 
-    optimizer = torch.optim.Adam(
-        model.parameters(),
-        lr=opt_cfg.lr,
-        weight_decay=opt_cfg.weight_decay
-    )
+    if config.optimizer.optimizer == "adam":
+        optimizer = torch.optim.Adam(
+            model.parameters(),
+            lr=opt_cfg.lr,
+            weight_decay=opt_cfg.weight_decay
+        )
+    else:
+        raise NotImplementedError("Only Adam Optimizer")
 
     prompt_num = train_cfg.batch_size - 1
     print("prompt_num", prompt_num)

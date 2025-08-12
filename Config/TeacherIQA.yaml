@@ -1,0 +1,48 @@
+train:
+  seed: 2023
+  zero_shot_dataset: []
+  batch_size: 196
+  epochs: 300
+  T_max: 50
+  eta_min: 0
+  workers: 32
+  world_size: 1
+  rank: 0
+  dist_url: "tcp://localhost:12754"
+  dist_backend: "nccl"
+  multiprocessing_distributed: true
+  gpu: null
+  model: teacheriqa
+  save_path: "./EXP/SingleDataset/teacheriqa"
+
+optimizer:
+  optimizer: adam
+  lr: 2e-5
+  weight_decay: 5e-4
+  lr_ratio: 10
+
+loss:
+  criterion: l1
+
+dataset:
+  train_dataset: [livec]
+  zero_shot_dataset: []
+
+  # Augmentation
+  random_flipping: true
+  random_flipping_rate: 0.5
+  
+  re_sample: true
+  re_sample_times: 25
+
+  resize_img: false
+  # resize_size: [512, 512]
+
+  random_crop: true
+  random_crop_size: [224, 224]
+
+  # Data Normalization
+  nornalize_score: true
+
+  # Loader
+  num_workers: 2

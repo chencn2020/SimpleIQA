@@ -68,7 +68,22 @@ TBU
 </thead>
 <tbody>
 <tr>
+  <td>HyperIQA</td>
+  <td></td><td></td><td></td><td></td>
+  <td></td><td></td><td></td><td></td>
+</tr>
+<tr>
+  <td>TeacherIQA</td>
+  <td></td><td></td><td></td><td></td>
+  <td></td><td></td><td></td><td></td>
+</tr>
+<tr>
   <td>MANIQA</td>
+  <td></td><td></td><td></td><td></td>
+  <td></td><td></td><td></td><td></td>
+</tr>
+<tr>
+  <td>MobileViT-IQA</td>
   <td></td><td></td><td></td><td></td>
   <td></td><td></td><td></td><td></td>
 </tr>
@@ -82,6 +97,7 @@ TBU
 We sincerely thank these following great public repositories:
 
 - [MoCo](https://github.com/facebookresearch/moco) and [PromptIQA](https://github.com/chencn2020/PromptIQA) : The code structure is partly based on their open repositories.
+- [IQA-PyTorch](https://github.com/chaofengc/IQA-PyTorch): This project is inspired by the great repository.
 - [HyperIQA](https://github.com/SSL92/hyperIQA), [MANIQA](https://github.com/IIGROUP/MANIQA)
 
 ## Stars ⭐️

@@ -1,0 +1,50 @@
+train:
+  seed: 2023
+  zero_shot_dataset: []
+  batch_size: 10
+  epochs: 50
+  T_max: 50
+  eta_min: 0
+  workers: 32
+  world_size: 1
+  rank: 0
+  dist_url: "tcp://localhost:12754"
+  dist_backend: "nccl"
+  multiprocessing_distributed: true
+  gpu: null
+  model: MobileViT_IQA
+  save_path: "./EXP/SingleDataset/MobileViT_IQA"
+
+optimizer:
+  optimizer: adam
+  lr: 1e-5
+  weight_decay: 1e-5
+
+loss:
+  criterion: mse
+
+dataset:
+  train_dataset: [livec]
+  zero_shot_dataset: []
+
+  # Augmentation
+  random_flipping: true
+  random_flipping_rate: 0.5
+  
+  re_sample: false
+  # re_sample_times: 25
+
+  resize_img: true
+  resize_size: [512, 512]
+
+  random_crop: false
+  # random_crop_size: [224, 224]
+
+  # Data Normalization
+  nornalize_score: true
+  
+  # img_normalize_mean: [0.5, 0.5, 0.5]
+  # img_normalize_std: [0.5, 0.5, 0.5]
+
+  # Loader
+  num_workers: 2
