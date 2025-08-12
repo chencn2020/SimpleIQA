@@ -19,10 +19,9 @@ An efficient and user-friendly template to help researchers and practitioners tr
 
 - [] Provide a simple IQA benchmark on different IQA datasets.
 - [] Collect awesome IQA models.
-- [] Collect awesome IQA models.
 - [] Collect awesome datasets.
 - [] Release inference templete.
-- [] Release training templete.
+- [x] Release training templete.
 
 ## Contents 📌
 
@@ -41,11 +40,11 @@ This repository provides a simple and efficient framework for training Image Qua
 <div id="reproducibility-baselines"></div>
 
 
-### Experiments Settings
+### Experiments Settings ⚙️
 
 TBU
 
-### Baselines
+### Baselines 📑
 
 <table>
 <caption><b>表 1：</b> The reproducibility results on different IQA benchmarks in terms of SROCC</caption>
@@ -87,6 +86,16 @@ TBU
   <td></td><td></td><td></td><td></td>
   <td></td><td></td><td></td><td></td>
 </tr>
+<tr>
+  <td>TOPIQ-NR</td>
+  <td></td><td></td><td></td><td></td>
+  <td></td><td></td><td></td><td></td>
+</tr>
+<tr>
+  <td>CLIPIQA</td>
+  <td></td><td></td><td></td><td></td>
+  <td></td><td></td><td></td><td></td>
+</tr>
 </tbody>
 </table>
 
@@ -97,7 +106,7 @@ TBU
 We sincerely thank these following great public repositories:
 
 - [MoCo](https://github.com/facebookresearch/moco) and [PromptIQA](https://github.com/chencn2020/PromptIQA) : The code structure is partly based on their open repositories.
-- [IQA-PyTorch](https://github.com/chaofengc/IQA-PyTorch): This project is inspired by the great repository. And parts of the model architecture (CLIPIQA+) are adapted from it.
+- [IQA-PyTorch](https://github.com/chaofengc/IQA-PyTorch): This project is inspired by the great repository. And parts of the model architecture (CLIPIQA, TOPIQ_NR) are adapted from it.
 - [HyperIQA](https://github.com/SSL92/hyperIQA), [MANIQA](https://github.com/IIGROUP/MANIQA)
 
 ## Stars ⭐️
